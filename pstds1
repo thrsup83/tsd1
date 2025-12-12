@@ -1,21 +1,76 @@
-$ScriptExtension = $GpoXml.Rsop.ComputerResults.ExtensionData | Where-Object { $_.Name -eq "Scripts" }
-$StartupScripts = $ScriptExtension.Extension.Script | Where-Object { $_.Type -eq "Startup" }
 
-Write-Host "`n--- Startup Scripts Analysis ---" -ForegroundColor Yellow
 
-if ($StartupScripts) {
-    foreach ($Script in $StartupScripts) {
-        $SourceGPO = $Script.SourceGPO.Name
-        $Cmd = $Script.Command
-        $Params = $Script.Parameters
-        
-        Write-Host "Found Startup Script in GPO: " -NoNewline
-        Write-Host "$SourceGPO" -ForegroundColor Red
-        Write-Host "   -> Command: $Cmd $Params" -ForegroundColor Cyan
-    }
-} else {
-    Write-Host "No GPO-based Startup Scripts detected." -ForegroundColor Green
+if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
+    Write-Warning "Please run as Administrator."
+    Break
 }
 
-# Cleanup
-Remove-Item $XmlPath -Force
+$pathLogDir = "C:\Logs"
+$pathLogFile = "$pathLogDir\Security_Audit_$(Get-Date -Format 'yyyyMMdd_HHmm').log"
+$pathTempExport = "$env:TEMP\secpol_export.cfg"
+
+if (!(Test-Path $pathLogDir)) { New-Item -ItemType Directory -Path $pathLogDir | Out-Null }
+
+Function Write-LogAndHost {
+    param($Message, $Color="White")
+    Write-Host $Message -ForegroundColor $Color
+    Add-Content -Path $pathLogFile -Value $Message
+}
+
+Write-LogAndHost "Initiating Local Security Policy Audit..." "Cyan"
+Write-LogAndHost "Timestamp: $(Get-Date)" "Gray"
+
+Write-LogAndHost "`n[Phase 1] Exporting Security Database..." "Yellow"
+Start-Process -FilePath "secedit.exe" -ArgumentList "/export /cfg `"$pathTempExport`" /quiet" -Wait
+
+if (Test-Path $pathTempExport) {
+    Write-LogAndHost "Database export successful." "Green"
+} else {
+    Write-LogAndHost "Error: Failed to export configuration." "Red"
+    Break
+}
+
+Write-LogAndHost "`n[Phase 2] Analyzing Restricted Groups Policy..." "Yellow"
+
+$content = Get-Content $pathTempExport
+$foundGroupMembership = $false
+$foundAdminRestriction = $false
+
+foreach ($line in $content) {
+    if ($line -match "\[Group Membership\]") {
+        $foundGroupMembership = $true
+        continue
+    }
+
+    if ($foundGroupMembership -and $line -match "^\[.*\]") {
+        break
+    }
+
+    if ($foundGroupMembership) {
+        # Check for Administrators Group SID (*S-1-5-32-544)
+        if ($line -match "\*S-1-5-32-544") {
+            $foundAdminRestriction = $true
+            $members = $line -split "="
+            
+            Write-LogAndHost "`n[ALERT] Restricted Groups Policy Detected." "Red"
+            Write-LogAndHost "Target: Administrators Group (*S-1-5-32-544)" "White"
+            Write-LogAndHost "Enforced Allowed Members (Whitelist):" "Gray"
+            
+            if ($members[1]) {
+                $memberList = $members[1] -split ","
+                foreach ($m in $memberList) {
+                    Write-LogAndHost " - $m" "Yellow"
+                }
+            } else {
+                Write-LogAndHost " - (Empty List - Access Denied)" "Red"
+            }
+        }
+    }
+}
+
+if (-not $foundAdminRestriction) {
+    Write-LogAndHost "`n[OK] No Restricted Groups policy found for local Administrators." "Green"
+}
+
+Remove-Item $pathTempExport -Force
+Write-LogAndHost "`n[INFO] Audit complete. Log file created: $pathLogFile" "Cyan"
