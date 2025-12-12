@@ -1,209 +1,154 @@
-$OutDir = "C:\temp\25-12-12"
-New-Item -ItemType Directory -Force -Path $OutDir | Out-Null
+https://learn.microsoft.com/en-us/sharepoint/remove-users
 
-$Account = Read-Host "Account to check (optional) e.g. DOMAIN\svc_account (Enter to skip)"
-$ts = Get-Date -Format "yyyyMMdd_HHmmss"
-$cn = $env:COMPUTERNAME
 
-$summary = Join-Path $OutDir "SUMMARY_${cn}_$ts.txt"
-$cfgPath = Join-Path $OutDir "UserRights_${cn}_$ts.cfg"
-$secCsv  = Join-Path $OutDir "Security_${cn}_$ts.csv"
-$taskCsv = Join-Path $OutDir "TaskScheduler_${cn}_$ts.csv"
-$sysCsv  = Join-Path $OutDir "System_${cn}_$ts.csv"
 
-function W([string]$s="") { Add-Content -Path $summary -Value $s }
+SharePoint
+Search
+Find by title
+SharePoint and OneDrive
+Manage user profiles
+Add and edit user profile properties
+About user profile synchronization
+Remove users from SharePoint
+Hybrid
+Migration
+Multi-Geo
+SharePoint Embedded
+Service prioritization in SharePoint Online
+Learn  SharePoint  SharePoint in Microsoft 365 
+Troubleshoot user profile removal issues in SharePoint
+This article describes how to remove users so they no longer appear in SharePoint. It should be used to troubleshoot Profile Property synchronization or mismatched ID issues only as advised by Microsoft Customer Support Services.
 
-W "=== Batch Logon Right Troubleshooting Summary ==="
-W "Computer: $cn"
-W "When: $(Get-Date)"
-W "User: $env:USERDOMAIN\$env:USERNAME"
-W ""
+Scenario 1: Someone is deleted from the Microsoft 365 admin center but still appears in SharePoint.
 
-$boot = (Get-CimInstance Win32_OperatingSystem).LastBootUpTime
-W "LastBootUpTime: $boot"
+When a user or guest browses to a SharePoint site, their user information is cached in the UserInfo list. When the user or guest is deleted, their related UserInfo information isn't removed. Their profile still appears, which may cause confusion when people view the people picker.
 
-$dbPath  = Join-Path $env:windir "security\Database\secedit.sdb"
-$logPath = Join-Path $env:windir "security\logs\scesrv.log"
-$db = Get-Item $dbPath -ErrorAction SilentlyContinue
-$sl = Get-Item $logPath -ErrorAction SilentlyContinue
+Scenario 2: Site User ID Mismatch.
 
-W ""
-W "File stamps:"
-if ($db) { W (" - secedit.sdb: {0} | LastWriteTime={1} | Length={2}" -f $db.FullName,$db.LastWriteTime,$db.Length) } else { W " - secedit.sdb: NOT FOUND" }
-if ($sl) { W (" - scesrv.log:  {0} | LastWriteTime={1} | Length={2}" -f $sl.FullName,$sl.LastWriteTime,$sl.Length) } else { W " - scesrv.log:  NOT FOUND" }
+This issue most frequently occurs when a user is deleted and the account is then re-created with the same user name. The account in the Microsoft 365 admin center or Active Directory (in directory synchronization scenarios) is deleted and re-created with the same user principal name (UPN). The new account is created by using a different ID value. When the user tries to access a site collection or their OneDrive, the user has an incorrect ID. A second scenario involves directory synchronization with an Active Directory organizational unit (OU). If users have already signed in to SharePoint, and then are moved to a different OU and resynced with SharePoint, they may experience this problem.
 
-W ""
-W "Exporting USER_RIGHTS to: $cfgPath"
-try {
-  secedit /export /cfg "$cfgPath" /areas USER_RIGHTS /quiet | Out-Null
-  W "Export OK."
-} catch {
-  W "Export FAILED: $($_.Exception.Message)"
-}
+Delete a user from the Microsoft 365 admin center
+For the steps to delete a user in the Microsoft 365 admin center, see Delete a user from your organization.
 
-$batchLine = $null
-$servLine  = $null
+ Note
 
-if (Test-Path $cfgPath) {
-  $lines = Get-Content $cfgPath -ErrorAction SilentlyContinue
-  $batchLine = $lines | Where-Object { $_ -match '^SeBatchLogonRight\s*=' } | Select-Object -First 1
-  $servLine  = $lines | Where-Object { $_ -match '^SeServiceLogonRight\s*=' } | Select-Object -First 1
+If you're using directory synchronization, you must remove the user from the on-premises Active Directory environment.
 
-  W ""
-  W "Current rights (raw):"
-  if ($batchLine) { W (" - " + $batchLine) } else { W " - SeBatchLogonRight = <not present in export>" }
-  if ($servLine)  { W (" - " + $servLine)  } else { W " - SeServiceLogonRight = <not present in export>" }
-} else {
-  W ""
-  W "User rights export file not found, skipping rights parsing."
-}
+After you delete a user, a series of jobs will remove the user from SharePoint. After the next incremental profile import job, the user (or users) will be marked as deleted, the user's profile page will be deleted, and the user's OneDrive will be marked for deletion by the MySite cleanup job.
 
-$acctSid = $null
-$present = $null
-if ($Account -and $batchLine) {
-  try {
-    $acctSid = (New-Object System.Security.Principal.NTAccount($Account)).Translate([System.Security.Principal.SecurityIdentifier]).Value
-    $present = ($batchLine -match [regex]::Escape("*$acctSid"))
-  } catch {
-    $acctSid = "<cannot translate to SID>"
-    $present = $null
-  }
+Delete a guest from the Microsoft 365 admin center
+Sign in to https://admin.microsoft.com as a SharePoint Administrator and above in Microsoft 365. (If you see a message that you don't have permission to access the page, you don't have Microsoft 365 admin permissions in your organization.)
 
-  W ""
-  W "Account check:"
-  W " - Account: $Account"
-  W " - SID: $acctSid"
-  if ($present -ne $null) { W " - Present in SeBatchLogonRight? $present" } else { W " - Present in SeBatchLogonRight? <unknown>" }
-}
+ Note
 
-W ""
-W "AuditPol (read-only):"
-try {
-  $ap = & auditpol /get /subcategory:"Authorization Policy Change" /r 2>$null
-  W ($ap -join "`n")
-} catch {
-  W "auditpol read failed."
-}
+If you have Office 365 operated by 21Vianet (China), sign in at https://login.partner.microsoftonline.cn/. Then select the Admin tile to open the admin center.
 
-if ($db) {
-  $t = $db.LastWriteTime
-  $start = $t.AddMinutes(-30)
-  $end   = $t.AddMinutes(30)
+In the left pane, select Users > Guest users.
 
-  W ""
-  W "Event correlation window (based on secedit.sdb LastWriteTime):"
-  W " - Start: $start"
-  W " - End:   $end"
+Select the user, then select Delete a user.
 
-  $secOut = @()
-  try {
-    $rawSec = Get-WinEvent -FilterHashtable @{LogName='Security'; StartTime=$start; EndTime=$end; Id=4704,4705,4688} -ErrorAction Stop |
-              Sort-Object TimeCreated
-    foreach ($ev in $rawSec) {
-      $x = [xml]$ev.ToXml()
-      $d = @{}
-      foreach($n in $x.Event.EventData.Data){ $d[$n.Name] = $n.'#text' }
+Delete a guest user using Microsoft Graph PowerShell
+Install Microsoft Graph PowerShell Module:
 
-      $subject = if($d.SubjectUserName){
-        if($d.SubjectDomainName){"$($d.SubjectDomainName)\$($d.SubjectUserName)"} else {$d.SubjectUserName}
-      } elseif($d.SubjectUserSid){ $d.SubjectUserSid } else { "" }
+Open PowerShell with elevated permissions (right-click on your Start menu or press Windows key + X).
 
-      $right = @($d.UserRight, $d.PrivilegeList) | Where-Object { $_ } | Select-Object -First 1
+Type the following command and press Enter:
 
-      $secOut += [pscustomobject]@{
-        TimeCreated = $ev.TimeCreated
-        Id          = $ev.Id
-        Subject     = $subject
-        Right       = $right
-        ProcessName = $d.ProcessName
-        CommandLine = $d.CommandLine
-        FirstLine   = (($ev.Message -split "`n")[0]).Trim()
-      }
-    }
-    if ($secOut.Count -gt 0) { $secOut | Export-Csv $secCsv -NoTypeInformation -Encoding UTF8 }
-  } catch {
-    W ""
-    W "Security query failed or no auditing: $($_.Exception.Message)"
-  }
+PowerShell
+Install-Module -Name Microsoft.Graph
+When prompted, type "Y" to install the NuGet provider.
 
-  W ""
-  if ($secOut.Count -gt 0) {
-    W "Security hits: $($secOut.Count) (saved: $secCsv)"
-    W "Most relevant (4704/4705 first):"
-    $secOut | Sort-Object @{e={if($_.Id -in 4704,4705){0}else{1}}}, TimeCreated |
-      Select-Object -First 10 TimeCreated,Id,Subject,Right,ProcessName,FirstLine |
-      ForEach-Object { W (" - " + ($_ | ConvertTo-Json -Compress)) }
-  } else {
-    W "Security hits: 0 (4704/4705/4688 not found in window)"
-  }
+Connect to Microsoft Graph:
 
-  $taskOut = @()
-  try {
-    $rawTask = Get-WinEvent -FilterHashtable @{LogName='Microsoft-Windows-TaskScheduler/Operational'; StartTime=$start; EndTime=$end} -ErrorAction Stop |
-               Sort-Object TimeCreated
-    foreach ($ev in $rawTask) {
-      $x = [xml]$ev.ToXml()
-      $d = @{}
-      foreach($n in $x.Event.EventData.Data){ $d[$n.Name] = $n.'#text' }
-      $taskOut += [pscustomobject]@{
-        TimeCreated = $ev.TimeCreated
-        Id          = $ev.Id
-        TaskName    = $d.TaskName
-        ResultCode  = $d.ResultCode
-        FirstLine   = (($ev.Message -split "`n")[0]).Trim()
-      }
-    }
-    if ($taskOut.Count -gt 0) { $taskOut | Export-Csv $taskCsv -NoTypeInformation -Encoding UTF8 }
-  } catch {}
+Now that the Microsoft Graph module is installed, connect to Microsoft Graph using the following command:
 
-  W ""
-  if ($taskOut.Count -gt 0) {
-    W "TaskScheduler hits: $($taskOut.Count) (saved: $taskCsv)"
-    $taskOut | Select-Object -First 12 TimeCreated,Id,TaskName,ResultCode,FirstLine |
-      ForEach-Object { W (" - " + ($_ | ConvertTo-Json -Compress)) }
-  } else {
-    W "TaskScheduler hits: 0 (or Operational log disabled)"
-  }
+PowerShell
+Connect-MgGraph -Scopes "User.ReadWrite.All", "Group.ReadWrite.All"
+Enter your admin credentials when prompted.
 
-  $sysOut = @()
-  try {
-    $rawSys = Get-WinEvent -FilterHashtable @{LogName='System'; StartTime=$start; EndTime=$end} -ErrorAction Stop |
-              Where-Object { $_.ProviderName -in 'Microsoft-Windows-GroupPolicy','SceCli','Service Control Manager' } |
-              Sort-Object TimeCreated
-    foreach($ev in $rawSys){
-      $sysOut += [pscustomobject]@{
-        TimeCreated = $ev.TimeCreated
-        Id          = $ev.Id
-        Provider    = $ev.ProviderName
-        FirstLine   = (($ev.Message -split "`n")[0]).Trim()
-      }
-    }
-    if ($sysOut.Count -gt 0) { $sysOut | Export-Csv $sysCsv -NoTypeInformation -Encoding UTF8 }
-  } catch {}
+Get the Guest User's UPN/Object ID:
 
-  W ""
-  if ($sysOut.Count -gt 0) {
-    W "System hits (GroupPolicy/SceCli/SCM): $($sysOut.Count) (saved: $sysCsv)"
-    $sysOut | Select-Object -First 12 TimeCreated,Provider,Id,FirstLine |
-      ForEach-Object { W (" - " + ($_ | ConvertTo-Json -Compress)) }
-  } else {
-    W "System hits: 0 (GroupPolicy/SceCli/SCM not found in window)"
-  }
-}
+Once connected, run the following command to get a list of all user accounts in your tenant:
 
-W ""
-W "=== Quick conclusion (heuristic) ==="
-if ($batchLine) {
-  if ($Account -and $acctSid -and $acctSid -ne "<cannot translate to SID>" -and $present -eq $false) {
-    W "-> The provided account is NOT in SeBatchLogonRight (SID not found). That explains the failure."
-  } else {
-    W "-> SeBatchLogonRight is defined (whitelist). If the account disappears after '1 day + reboot', something is reapplying this list."
-  }
-} else {
-  W "-> SeBatchLogonRight was not present in the export; it may be controlled by a different mechanism/scope."
-}
+PowerShell
+Get-MgUser -All | Format-List  ID, DisplayName, Mail, UserPrincipalName
+Note down the UPN or Object ID of the guest user you want to remove.
 
-if ($db) { W "-> Next correlation point is secedit.sdb LastWriteTime: $($db.LastWriteTime)" }
+Remove the Guest User:
 
-Write-Host "OK. Summary: $summary" -ForegroundColor Green
-Write-Host "Files: $cfgPath ; $secCsv ; $taskCsv ; $sysCsv" -ForegroundColor Cyan
+Run the following command to remove the specified guest user (replace TestUser@example.com with the actual UPN or Object ID):
+
+PowerShell
+Remove-MgUser -UserId "TestUser@contoso.com#EXT#@contoso.onmicrosoft.com"
+This command will permanently remove the user from Azure AD.
+
+Remove people from the UserInfo list
+The preceding steps removed access to Microsoft 365 and SharePoint. However, the user or guest still appears in people searches and in the SharePoint Online Management Shell when you use the Get-SPOUser cmdlet. To completely remove people from SharePoint, you must remove them from the UserInfo list. There are two ways to do this:
+
+Browsing site by site in SharePoint
+You have to browse to each site collection that the user or guest visited, and then follow these steps:
+
+ Note
+
+This option is available only if the user previously browsed to the site collection. They won't be listed if they were granted access but never visited the site.
+
+Browse to the site and edit the URL by adding the following string to the end of it: /_layouts/15/people.aspx?MembershipGroupId=0
+
+For example, the full URL resembles the following: https://fabrikam.sharepoint.com/_layouts/15/people.aspx?membershipGroupId=0.
+
+Select the person from the list, and then on the Actions menu, select Delete Users from Site Collection.
+
+Using the SharePoint Online Management Shell
+Install the SharePoint Online Management Shell.
+
+Connect to SharePoint as a SharePoint Administrator or above in Microsoft 365. To learn how, see Getting started with SharePoint Online Management Shell.
+
+Run the following command for each site collection that the user or guest visited:
+
+PowerShell
+Remove-SPOUser -Site https://fabrikam.sharepoint.com/sites/sc1 -LoginName jondoe@fabrikam.com
+ Note
+
+Replace the jondoe@fabrikam.com placeholder with the person in question.
+
+Clear browser history
+SharePoint uses browser caching in several scenarios, including in the people picker. Even when a user is fully removed, he or she may still remain in the browser cache. Clearing the browser history resolves this issue. For info about doing this in Microsoft Edge, see View and delete browser history in Microsoft Edge.
+
+When you clear the browser history, make sure that you also select to clear cookies and website data.
+
+Additional resources
+Documentation
+
+Fix site user ID mismatch in SharePoint or OneDrive - SharePoint
+
+Provides a diagnostic that offers resolutions for common issues caused by a site user ID mismatch.
+
+Access Denied or You need permission errors in SharePoint Online and OneDrive - SharePoint
+
+Resolve common access and permission errors.
+
+Self-help diagnostics for SharePoint Online and OneDrive administrators - SharePoint
+
+List of SharePoint Online and OneDrive diagnostics
+
+Show 5 more
+Training
+
+Module
+
+Manage SharePoint Online by using Windows PowerShell - Training
+
+Manage SharePoint Online by using Windows PowerShell
+
+Last updated on 05/29/2025
+In this article
+Delete a user from the Microsoft 365 admin center
+Delete a guest from the Microsoft 365 admin center
+Delete a guest user using Microsoft Graph PowerShell
+Remove people from the UserInfo list
+Clear browser history
+Was this page helpful?
+
+Manage cookies
+AI Disclaimer
+P
