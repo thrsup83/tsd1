@@ -1,328 +1,154 @@
-#requires -Version 3.0
-Set-StrictMode -Version Latest
-$ErrorActionPreference = 'Continue'
+https://learn.microsoft.com/en-us/sharepoint/remove-users
 
-$LogDir  = 'C:\temp\javaupdt'
-$LogPath = Join-Path $LogDir 'log.txt'
 
-New-Item -ItemType Directory -Force -Path $LogDir | Out-Null
-"==== Java / Server Hunter $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') ====" | Out-File -FilePath $LogPath -Encoding UTF8
 
-function Write-Log {
-  param(
-    [Parameter(Mandatory)][string]$Message,
-    [ValidateSet('INFO','WARN','ERROR')][string]$Level = 'INFO'
-  )
-  $line = "{0} [{1}] {2}" -f (Get-Date -Format 'yyyy-MM-dd HH:mm:ss'), $Level, $Message
-  $line | Tee-Object -FilePath $LogPath -Append
-}
+SharePoint
+Search
+Find by title
+SharePoint and OneDrive
+Manage user profiles
+Add and edit user profile properties
+About user profile synchronization
+Remove users from SharePoint
+Hybrid
+Migration
+Multi-Geo
+SharePoint Embedded
+Service prioritization in SharePoint Online
+Learn  SharePoint  SharePoint in Microsoft 365 
+Troubleshoot user profile removal issues in SharePoint
+This article describes how to remove users so they no longer appear in SharePoint. It should be used to troubleshoot Profile Property synchronization or mismatched ID issues only as advised by Microsoft Customer Support Services.
 
-function Section([string]$Title) {
-  Write-Log ""
-  Write-Log ("==================== {0} ====================" -f $Title)
-}
+Scenario 1: Someone is deleted from the Microsoft 365 admin center but still appears in SharePoint.
 
-function Try-GetFileVersion([string]$Path) {
-  try { return (Get-Item -LiteralPath $Path -ErrorAction Stop).VersionInfo.FileVersion } catch { return $null }
-}
+When a user or guest browses to a SharePoint site, their user information is cached in the UserInfo list. When the user or guest is deleted, their related UserInfo information isn't removed. Their profile still appears, which may cause confusion when people view the people picker.
 
-function Try-ReadReleaseJavaVersion([string]$JavaHome) {
-  try {
-    $release = Join-Path $JavaHome 'release'
-    if (Test-Path $release) {
-      $line = (Get-Content -LiteralPath $release -ErrorAction Stop | Where-Object { $_ -match '^JAVA_VERSION=' } | Select-Object -First 1)
-      if ($line) { return ($line -replace '^JAVA_VERSION="?','' -replace '"$','') }
-    }
-  } catch {}
-  return $null
-}
+Scenario 2: Site User ID Mismatch.
 
-$JavaVersionCache = @{}
-function Get-JavaInfoFromJavaExe([string]$JavaExe) {
-  if (-not $JavaExe) { return $null }
-  if ($JavaVersionCache.ContainsKey($JavaExe)) { return $JavaVersionCache[$JavaExe] }
+This issue most frequently occurs when a user is deleted and the account is then re-created with the same user name. The account in the Microsoft 365 admin center or Active Directory (in directory synchronization scenarios) is deleted and re-created with the same user principal name (UPN). The new account is created by using a different ID value. When the user tries to access a site collection or their OneDrive, the user has an incorrect ID. A second scenario involves directory synchronization with an Active Directory organizational unit (OU). If users have already signed in to SharePoint, and then are moved to a different OU and resynced with SharePoint, they may experience this problem.
 
-  $obj = [pscustomobject]@{
-    JavaExe     = $JavaExe
-    JavaHome    = $null
-    ReleaseVer  = $null
-    JavaDashVer = $null
-    FileVersion = $null
-  }
+Delete a user from the Microsoft 365 admin center
+For the steps to delete a user in the Microsoft 365 admin center, see Delete a user from your organization.
 
-  try {
-    if ($JavaExe -match '(?i)\\bin\\javaw?\.exe$') {
-      $obj.JavaHome = ($JavaExe -replace '(?i)\\bin\\javaw?\.exe$','')
-      $obj.ReleaseVer = Try-ReadReleaseJavaVersion $obj.JavaHome
-    }
-    $obj.FileVersion = Try-GetFileVersion $JavaExe
+ Note
 
-    $out = & "$JavaExe" -version 2>&1
-    if ($out) {
-      $obj.JavaDashVer = ($out | Select-Object -First 1).ToString().Trim()
-    }
-  } catch {}
+If you're using directory synchronization, you must remove the user from the on-premises Active Directory environment.
 
-  $JavaVersionCache[$JavaExe] = $obj
-  return $obj
-}
+After you delete a user, a series of jobs will remove the user from SharePoint. After the next incremental profile import job, the user (or users) will be marked as deleted, the user's profile page will be deleted, and the user's OneDrive will be marked for deletion by the MySite cleanup job.
 
-function Extract-JavaExeFromText([string]$Text) {
-  if (-not $Text) { return $null }
+Delete a guest from the Microsoft 365 admin center
+Sign in to https://admin.microsoft.com as a SharePoint Administrator and above in Microsoft 365. (If you see a message that you don't have permission to access the page, you don't have Microsoft 365 admin permissions in your organization.)
 
-  $m = [regex]::Match($Text, '(?i)([A-Z]:\\[^"]*?\\bin\\javaw?\.exe)')
-  if ($m.Success) { return $m.Groups[1].Value }
+ Note
 
-  $m2 = [regex]::Match($Text, '(?i)"([A-Z]:\\[^"]*?\\bin\\javaw?\.exe)"')
-  if ($m2.Success) { return $m2.Groups[1].Value }
+If you have Office 365 operated by 21Vianet (China), sign in at https://login.partner.microsoftonline.cn/. Then select the Admin tile to open the admin center.
 
-  return $null
-}
+In the left pane, select Users > Guest users.
 
-function Get-ProcrunJavaInfo([string]$ServiceName) {
-  $paths = @(
-    "HKLM:\SOFTWARE\Apache Software Foundation\Procrun 2.0\$ServiceName\Parameters\Java",
-    "HKLM:\SOFTWARE\WOW6432Node\Apache Software Foundation\Procrun 2.0\$ServiceName\Parameters\Java"
-  )
+Select the user, then select Delete a user.
 
-  foreach ($p in $paths) {
-    if (Test-Path $p) {
-      try {
-        $r = Get-ItemProperty -LiteralPath $p -ErrorAction Stop
-        return [pscustomobject]@{
-          JavaHome = $r.JavaHome
-          Jvm      = $r.Jvm
-          Options  = $r.Options
-          Source   = $p
-        }
-      } catch {}
-    }
-  }
-  return $null
-}
+Delete a guest user using Microsoft Graph PowerShell
+Install Microsoft Graph PowerShell Module:
 
-function Get-NssmJavaInfo([string]$ServiceName) {
-  $p = "HKLM:\SYSTEM\CurrentControlSet\Services\$ServiceName\Parameters"
-  if (Test-Path $p) {
-    try {
-      $r = Get-ItemProperty -LiteralPath $p -ErrorAction Stop
-      return [pscustomobject]@{
-        Application   = $r.Application
-        AppDirectory = $r.AppDirectory
-        AppParameters= $r.AppParameters
-        Source        = $p
-      }
-    } catch {}
-  }
-  return $null
-}
+Open PowerShell with elevated permissions (right-click on your Start menu or press Windows key + X).
 
-$ServerPatterns = @(
-  'tomcat','apache tomcat','weblogic','jboss','wildfly','jetty','glassfish','websphere',
-  'spring boot','kafka','zookeeper','nexus','artifactory','jenkins'
-)
+Type the following command and press Enter:
 
-function LooksLikeServer([string]$NameOrPath) {
-  if (-not $NameOrPath) { return $false }
-  foreach ($p in $ServerPatterns) {
-    if ($NameOrPath -match [regex]::Escape($p)) { return $true }
-  }
-  return $false
-}
+PowerShell
+Install-Module -Name Microsoft.Graph
+When prompted, type "Y" to install the NuGet provider.
 
-Section "Context"
-Write-Log ("ComputerName: {0}" -f $env:COMPUTERNAME)
-Write-Log ("User: {0}\{1}" -f $env:USERDOMAIN, $env:USERNAME)
-Write-Log ("PSVersion: {0}" -f $PSVersionTable.PSVersion)
-try {
-  $os = Get-CimInstance Win32_OperatingSystem
-  Write-Log ("OS: {0} (Build {1})" -f $os.Caption, $os.BuildNumber)
-} catch { Write-Log "Failed to read OS via WMI/CIM." "WARN" }
+Connect to Microsoft Graph:
 
-Section "Environment Variables (JAVA_HOME/JRE_HOME/CLASSPATH/PATH)"
-foreach ($v in @('JAVA_HOME','JRE_HOME','CLASSPATH')) {
-  $m = [Environment]::GetEnvironmentVariable($v,'Machine')
-  $u = [Environment]::GetEnvironmentVariable($v,'User')
-  $p = [Environment]::GetEnvironmentVariable($v,'Process')
-  Write-Log ("[Machine] {0}={1}" -f $v, ($(if($m){$m}else{'(not defined)'})))
-  if ($u) { Write-Log ("[User]    {0}={1}" -f $v, $u) }
-  if ($p -and $p -ne $m -and $p -ne $u) { Write-Log ("[Process] {0}={1}" -f $v, $p) }
-}
-$pathM = [Environment]::GetEnvironmentVariable('Path','Machine')
-Write-Log "[Machine] PATH (lines):"
-$pathM -split ';' | Where-Object { $_ -and $_.Trim() } | ForEach-Object { Write-Log ("  {0}" -f $_) }
+Now that the Microsoft Graph module is installed, connect to Microsoft Graph using the following command:
 
-Section "Java via PATH (where/java -version)"
-try {
-  $where = & where.exe java 2>&1
-  foreach ($l in $where) { Write-Log "$l" }
-} catch { Write-Log "where.exe java failed." "WARN" }
+PowerShell
+Connect-MgGraph -Scopes "User.ReadWrite.All", "Group.ReadWrite.All"
+Enter your admin credentials when prompted.
 
-try {
-  $cmd = Get-Command java -ErrorAction Stop
-  Write-Log ("Get-Command java -> {0}" -f $cmd.Source)
-  $ji = Get-JavaInfoFromJavaExe $cmd.Source
-  if ($ji) {
-    Write-Log ("  JavaExe:     {0}" -f $ji.JavaExe)
-    Write-Log ("  JavaHome:    {0}" -f $ji.JavaHome)
-    Write-Log ("  release:     {0}" -f ($(if($ji.ReleaseVer){$ji.ReleaseVer}else{'(n/a)'})))
-    Write-Log ("  java -version(first line): {0}" -f ($(if($ji.JavaDashVer){$ji.JavaDashVer}else{'(n/a)'})))
-    Write-Log ("  FileVersion: {0}" -f ($(if($ji.FileVersion){$ji.FileVersion}else{'(n/a)'})))
-  }
-} catch {
-  Write-Log "Java is not resolving via PATH (Get-Command java failed)." "WARN"
-}
+Get the Guest User's UPN/Object ID:
 
-Section "Java Installations (Registry + Standard Folders)"
-$JavaHomes = New-Object System.Collections.Generic.HashSet[string]
+Once connected, run the following command to get a list of all user accounts in your tenant:
 
-$roots = @(
-  'HKLM:\SOFTWARE\JavaSoft\Java Runtime Environment',
-  'HKLM:\SOFTWARE\JavaSoft\Java Development Kit',
-  'HKLM:\SOFTWARE\WOW6432Node\JavaSoft\Java Runtime Environment',
-  'HKLM:\SOFTWARE\WOW6432Node\JavaSoft\Java Development Kit'
-)
-foreach ($r in $roots) {
-  if (Test-Path $r) {
-    Write-Log "Key: $r"
-    try {
-      Get-ChildItem $r -ErrorAction SilentlyContinue | ForEach-Object {
-        try {
-          $ip = Get-ItemProperty $_.PSPath -ErrorAction Stop
-          if ($ip.JavaHome) {
-            [void]$JavaHomes.Add($ip.JavaHome)
-            Write-Log ("  {0} -> JavaHome: {1}" -f $_.PSChildName, $ip.JavaHome)
-          }
-        } catch {}
-      }
-    } catch {}
-  }
-}
+PowerShell
+Get-MgUser -All | Format-List  ID, DisplayName, Mail, UserPrincipalName
+Note down the UPN or Object ID of the guest user you want to remove.
 
-foreach ($base in @('C:\Program Files\Java','C:\Program Files (x86)\Java')) {
-  if (Test-Path $base) {
-    Get-ChildItem -LiteralPath $base -Directory -ErrorAction SilentlyContinue | ForEach-Object {
-      [void]$JavaHomes.Add($_.FullName)
-    }
-  }
-}
+Remove the Guest User:
 
-if ($JavaHomes.Count -eq 0) {
-  Write-Log "No Java installation found via Registry/Standard folders." "WARN"
-} else {
-  foreach ($h in ($JavaHomes | Sort-Object)) {
-    $javaExe = Join-Path $h 'bin\java.exe'
-    $javaw   = Join-Path $h 'bin\javaw.exe'
-    $picked = $null
-    if (Test-Path $javaExe) { $picked = $javaExe }
-    elseif (Test-Path $javaw) { $picked = $javaw }
+Run the following command to remove the specified guest user (replace TestUser@example.com with the actual UPN or Object ID):
 
-    Write-Log ("JavaHome detected: {0}" -f $h)
-    if ($picked) {
-      $ji = Get-JavaInfoFromJavaExe $picked
-      Write-Log ("  JavaExe:     {0}" -f $ji.JavaExe)
-      Write-Log ("  release:     {0}" -f ($(if($ji.ReleaseVer){$ji.ReleaseVer}else{'(n/a)'})))
-      Write-Log ("  java -version(first line): {0}" -f ($(if($ji.JavaDashVer){$ji.JavaDashVer}else{'(n/a)'})))
-      Write-Log ("  FileVersion: {0}" -f ($(if($ji.FileVersion){$ji.FileVersion}else{'(n/a)'})))
-    } else {
-      Write-Log "  Could not find bin\java.exe inside this JavaHome." "WARN"
-    }
-  }
-}
+PowerShell
+Remove-MgUser -UserId "TestUser@contoso.com#EXT#@contoso.onmicrosoft.com"
+This command will permanently remove the user from Azure AD.
 
-Section "SERVERS on machine (based on Services)"
-$allServices = @()
-try { $allServices = Get-CimInstance Win32_Service } catch { Write-Log "Failed to list services via CIM/WMI." "ERROR" }
+Remove people from the UserInfo list
+The preceding steps removed access to Microsoft 365 and SharePoint. However, the user or guest still appears in people searches and in the SharePoint Online Management Shell when you use the Get-SPOUser cmdlet. To completely remove people from SharePoint, you must remove them from the UserInfo list. There are two ways to do this:
 
-$serverServices = $allServices | Where-Object {
-  LooksLikeServer($_.Name) -or LooksLikeServer($_.DisplayName) -or LooksLikeServer($_.PathName)
-} | Sort-Object Name
+Browsing site by site in SharePoint
+You have to browse to each site collection that the user or guest visited, and then follow these steps:
 
-if (-not $serverServices) {
-  Write-Log "No app server-like service (Tomcat/WebLogic/JBoss/etc.) detected by default." "WARN"
-} else {
-  foreach ($s in $serverServices) {
-    Write-Log ("Service: {0} | State: {1} | StartMode: {2}" -f $s.Name,$s.State,$s.StartMode)
-    Write-Log ("  DisplayName: {0}" -f $s.DisplayName)
-    Write-Log ("  PathName:    {0}" -f $s.PathName)
+ Note
 
-    $javaExe = Extract-JavaExeFromText $s.PathName
+This option is available only if the user previously browsed to the site collection. They won't be listed if they were granted access but never visited the site.
 
-    if (-not $javaExe -and ($s.PathName -match '(?i)prunsrv|tomcat')) {
-      $pr = Get-ProcrunJavaInfo $s.Name
-      if ($pr) {
-        Write-Log ("  Procrun(Java) found at: {0}" -f $pr.Source)
-        if ($pr.JavaHome) { Write-Log ("  Procrun JavaHome: {0}" -f $pr.JavaHome) }
-        if ($pr.Jvm)      { Write-Log ("  Procrun Jvm:      {0}" -f $pr.Jvm) }
-        if ($pr.JavaHome) {
-          $candidate = Join-Path $pr.JavaHome 'bin\java.exe'
-          if (Test-Path $candidate) { $javaExe = $candidate }
-        }
-      }
-    }
+Browse to the site and edit the URL by adding the following string to the end of it: /_layouts/15/people.aspx?MembershipGroupId=0
 
-    if (-not $javaExe -and ($s.PathName -match '(?i)nssm\.exe')) {
-      $ns = Get-NssmJavaInfo $s.Name
-      if ($ns) {
-        Write-Log ("  NSSM params at: {0}" -f $ns.Source)
-        if ($ns.Application)   { Write-Log ("  NSSM Application:   {0}" -f $ns.Application) }
-        if ($ns.AppDirectory)  { Write-Log ("  NSSM AppDirectory:  {0}" -f $ns.AppDirectory) }
-        if ($ns.AppParameters) { Write-Log ("  NSSM AppParameters: {0}" -f $ns.AppParameters) }
-        $javaExe = Extract-JavaExeFromText ($ns.Application + ' ' + $ns.AppParameters)
-      }
-    }
+For example, the full URL resembles the following: https://fabrikam.sharepoint.com/_layouts/15/people.aspx?membershipGroupId=0.
 
-    if ($javaExe) {
-      $ji = Get-JavaInfoFromJavaExe $javaExe
-      Write-Log ("  >>> Java used (probable): {0}" -f $ji.JavaExe) "WARN"
-      Write-Log ("      JavaHome:    {0}" -f $ji.JavaHome)
-      Write-Log ("      release:     {0}" -f ($(if($ji.ReleaseVer){$ji.ReleaseVer}else{'(n/a)'})))
-      Write-Log ("      java -version(first line): {0}" -f ($(if($ji.JavaDashVer){$ji.JavaDashVer}else{'(n/a)'})))
-      Write-Log ("      FileVersion: {0}" -f ($(if($ji.FileVersion){$ji.FileVersion}else{'(n/a)'})))
-    } else {
-      Write-Log "  Could not determine java.exe used by this service just by PathName/Wrapper." "WARN"
-    }
-  }
-}
+Select the person from the list, and then on the Actions menu, select Delete Users from Site Collection.
 
-Section "WHO is using Java NOW (java/javaw processes + service mapping)"
-$svcByPid = @{}
-try {
-  $allServices | Where-Object { $_.ProcessId -gt 0 } | ForEach-Object { $svcByPid[$_.ProcessId] = $_ }
-} catch {}
+Using the SharePoint Online Management Shell
+Install the SharePoint Online Management Shell.
 
-try {
-  $procs = Get-CimInstance Win32_Process | Where-Object { $_.Name -match '^(java|javaw)\.exe$' } | Sort-Object ProcessId
-  if (-not $procs) {
-    Write-Log "No java/javaw process running right now." "WARN"
-  } else {
-    foreach ($p in $procs) {
-      Write-Log ("PID {0} | {1}" -f $p.ProcessId, $p.Name)
-      if ($p.ExecutablePath) { Write-Log ("  ExecutablePath: {0}" -f $p.ExecutablePath) }
-      if ($p.CommandLine)    { Write-Log ("  CommandLine:    {0}" -f $p.CommandLine) }
-      else { Write-Log "  CommandLine:    (empty - run as Admin to view)" "WARN" }
+Connect to SharePoint as a SharePoint Administrator or above in Microsoft 365. To learn how, see Getting started with SharePoint Online Management Shell.
 
-      $javaExe = $p.ExecutablePath
-      if (-not $javaExe -and $p.CommandLine) { $javaExe = Extract-JavaExeFromText $p.CommandLine }
-      if ($javaExe) {
-        $ji = Get-JavaInfoFromJavaExe $javaExe
-        Write-Log ("  >>> JavaExe:     {0}" -f $ji.JavaExe) "WARN"
-        Write-Log ("      JavaHome:    {0}" -f $ji.JavaHome)
-        Write-Log ("      release:     {0}" -f ($(if($ji.ReleaseVer){$ji.ReleaseVer}else{'(n/a)'})))
-        Write-Log ("      java -version(first line): {0}" -f ($(if($ji.JavaDashVer){$ji.JavaDashVer}else{'(n/a)'})))
-      }
+Run the following command for each site collection that the user or guest visited:
 
-      if ($svcByPid.ContainsKey($p.ProcessId)) {
-        $s = $svcByPid[$p.ProcessId]
-        Write-Log ("  -> Service owner of PID: {0} ({1})" -f $s.Name, $s.DisplayName)
-      }
-    }
-  }
-} catch {
-  Write-Log "Failed to read processes via Win32_Process (permission/WMI)." "ERROR"
-}
+PowerShell
+Remove-SPOUser -Site https://fabrikam.sharepoint.com/sites/sc1 -LoginName jondoe@fabrikam.com
+ Note
 
-Section "Summary"
-Write-Log ("Log saved to: {0}" -f $LogPath)
-Write-Log "Tip: ISE as Admin = more CommandLine and better detection."
-Write-Log "End."
+Replace the jondoe@fabrikam.com placeholder with the person in question.
+
+Clear browser history
+SharePoint uses browser caching in several scenarios, including in the people picker. Even when a user is fully removed, he or she may still remain in the browser cache. Clearing the browser history resolves this issue. For info about doing this in Microsoft Edge, see View and delete browser history in Microsoft Edge.
+
+When you clear the browser history, make sure that you also select to clear cookies and website data.
+
+Additional resources
+Documentation
+
+Fix site user ID mismatch in SharePoint or OneDrive - SharePoint
+
+Provides a diagnostic that offers resolutions for common issues caused by a site user ID mismatch.
+
+Access Denied or You need permission errors in SharePoint Online and OneDrive - SharePoint
+
+Resolve common access and permission errors.
+
+Self-help diagnostics for SharePoint Online and OneDrive administrators - SharePoint
+
+List of SharePoint Online and OneDrive diagnostics
+
+Show 5 more
+Training
+
+Module
+
+Manage SharePoint Online by using Windows PowerShell - Training
+
+Manage SharePoint Online by using Windows PowerShell
+
+Last updated on 05/29/2025
+In this article
+Delete a user from the Microsoft 365 admin center
+Delete a guest from the Microsoft 365 admin center
+Delete a guest user using Microsoft Graph PowerShell
+Remove people from the UserInfo list
+Clear browser history
+Was this page helpful?
+
+Manage cookies
+AI Disclaimer
+P
