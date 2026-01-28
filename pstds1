@@ -69,3 +69,45 @@ Remove-Item "C:\Windows\CCM" -Recurse -Force -EA 0 2>> $l
 
 "--- END FORCE REMOVAL ---" >> $l
 Write-Host "Limpeza de Registro concluida. Verifique $l" -ForegroundColor Cyan
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+$l = "C:\temp\install_sccm.log"
+$i = "C:\temp\SCCM_Client6-2020\ccmsetup.exe"
+
+"--- START INSTALLATION: $(Get-Date) ---" > $l
+
+if (Test-Path $i) {
+    "Installer found. Running ccmsetup..." >> $l
+    # Comando com seus servidores de New Jersey e modo Golden Image
+    $p = Start-Process $i "/mp:NJNWKSMS08V.enterprise.pseg.com smssiteCode=A03 dnssuffix=enterprise.pseg.com /noservice /ForceInstall" -Wait -PassThru
+    
+    "Installation finished with Exit Code: $($p.ExitCode)" >> $l
+    
+    if ($p.ExitCode -eq 0) {
+        "SUCCESS: SCCM Client installed properly" >> $l
+    } else {
+        "ERROR: Installation failed. Check ccmsetup.log for details" >> $l
+    }
+} else {
+    "FATAL ERROR: Installer not found at $i" >> $l
+}
+
+"--- END OF SCRIPT ---" >> $l
+Write-Host "Process finished. Check $l" -ForegroundColor Cyan
