@@ -1,10 +1,20 @@
-# 1. Mata todos os processos do SCCM que podem estar travados
-taskkill /F /IM ccmsetup.exe /T /EA 0
-taskkill /F /IM ccmexec.exe /T /EA 0
-
-# 2. Deleta o serviço do Windows na marra (o culpado do erro de reinstalação)
-sc.exe delete CcmExec
-sc.exe delete ccmsetup
-
-# 3. Limpa as pastas de instalação de novo
-Remove-Item "C:\Windows\CCM", "C:\Windows\ccmsetup", "C:\Windows\ccmcache" -Recurse -Force -EA 0
+$l = "C:\temp\cleanup_sccm.log"
+"--- START CLEANUP: $(Get-Date) ---" > $l
+"Stopping processes..." >> $l
+taskkill /F /IM ccmsetup.exe /T /EA 0 2>> $l
+taskkill /F /IM ccmexec.exe /T /EA 0 2>> $l
+"Deleting services..." >> $l
+sc.exe delete CcmExec 2>> $l
+sc.exe delete ccmsetup 2>> $l
+"Cleaning WMI..." >> $l
+Get-WmiObject -Namespace "root" -Query "Select * from __Namespace where Name='ccm'" | Remove-WmiObject -EA 0 2>> $l
+"Removing folders..." >> $l
+$flds = "C:\Windows\CCM", "C:\Windows\ccmsetup", "C:\Windows\ccmcache"
+foreach ($f in $flds) {
+    if (Test-Path $f) {
+        Remove-Item $f -Recurse -Force -EA 0 2>> $l
+        "Folder $f removed" >> $l
+    }
+}
+"--- END CLEANUP: $(Get-Date) ---" >> $l
+Write-Host "Cleanup finished. Check $l" -ForegroundColor Cyan
