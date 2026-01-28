@@ -18,3 +18,31 @@ foreach ($f in $flds) {
 }
 "--- END CLEANUP: $(Get-Date) ---" >> $l
 Write-Host "Cleanup finished. Check $l" -ForegroundColor Cyan
+
+
+
+
+
+
+$l = "C:\temp\final_check.log"
+"--- START FINAL VALIDATION: $(Get-Date) ---" > $l
+
+# 1. Check if service still exists (The truth)
+$svc = Get-Service CcmExec -ErrorAction SilentlyContinue
+if ($svc) { 
+    "ERROR: Service CcmExec still exists!" >> $l 
+} else { 
+    "SUCCESS: Service CcmExec is gone" >> $l 
+}
+
+# 2. Kill the Start Menu shortcut (The 'ghost')
+$lnk = "$env:ProgramData\Microsoft\Windows\Start Menu\Programs\Software Center.lnk"
+if (Test-Path $lnk) {
+    Remove-Item $lnk -Force -EA 0
+    "SUCCESS: Start Menu shortcut removed" >> $l
+} else {
+    "INFO: Shortcut already gone from disk" >> $l
+}
+
+"--- END VALIDATION ---" >> $l
+Write-Host "Check $l to confirm the state." -ForegroundColor Cyan
