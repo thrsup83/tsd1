@@ -1,23 +1,5 @@
-SELECT 
-    SMS_R_System.Name, 
-    SMS_G_System_ADD_REMOVE_PROGRAMS.DisplayName, 
-    SMS_G_System_ADD_REMOVE_PROGRAMS.Version 
-FROM 
-    SMS_R_System 
-INNER JOIN 
-    SMS_G_System_ADD_REMOVE_PROGRAMS ON SMS_G_System_ADD_REMOVE_PROGRAMS.ResourceID = SMS_R_System.ResourceId 
-WHERE 
-    SMS_G_System_ADD_REMOVE_PROGRAMS.DisplayName LIKE "Notepad++%"
-
-UNION
-
-SELECT 
-    SMS_R_System.Name, 
-    SMS_G_System_ADD_REMOVE_PROGRAMS_64.DisplayName, 
-    SMS_G_System_ADD_REMOVE_PROGRAMS_64.Version 
-FROM 
-    SMS_R_System 
-INNER JOIN 
-    SMS_G_System_ADD_REMOVE_PROGRAMS_64 ON SMS_G_System_ADD_REMOVE_PROGRAMS_64.ResourceID = SMS_R_System.ResourceId 
-WHERE 
-    SMS_G_System_ADD_REMOVE_PROGRAMS_64.DisplayName LIKE "Notepad++%"
+select SMS_R_System.ResourceId, SMS_R_System.ResourceType, SMS_R_System.Name, SMS_R_System.SMSUniqueIdentifier, SMS_R_System.ResourceDomainORWorkgroup, SMS_R_System.Client 
+from SMS_R_System 
+inner join SMS_G_System_INSTALLED_SOFTWARE on SMS_G_System_INSTALLED_SOFTWARE.ResourceID = SMS_R_System.ResourceId 
+where SMS_G_System_INSTALLED_SOFTWARE.ProductName like "Notepad++%" 
+and SMS_G_System_INSTALLED_SOFTWARE.ProductVersion != "8.9.1"
