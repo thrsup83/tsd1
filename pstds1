@@ -1,18 +1,26 @@
-# Define os caminhos de busca no registro (64 e 32 bits)
+
+Stop-Process -Name "notepad++" -Force -ErrorAction SilentlyContinue
+
+
 $Paths = @(
     "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*",
     "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*"
 )
 
-# Busca qualquer entrada que contenha "Notepad++"
-$Apps = Get-ItemProperty $Paths -ErrorAction SilentlyContinue | 
-        Where-Object { $_.DisplayName -like "*Notepad++*" } | 
-        Select-Object DisplayName, DisplayVersion
+$Apps = Get-ItemProperty $Paths -ErrorAction SilentlyContinue | Where-Object { $_.DisplayName -like "*Notepad++*" }
 
 if ($Apps) {
     foreach ($App in $Apps) {
-        Write-Output "STATUS: INSTALADO | Nome: $($App.DisplayName) | Versao: $($App.DisplayVersion)"
+        # Pega o caminho do desinstalador
+        $UninstallPath = $App.UninstallString -replace '"', ''
+        
+        if ($UninstallPath -and (Test-Path $UninstallPath)) {
+            Write-Output "Removendo: $($App.DisplayName)..."
+            # Roda o desinstalador com o parâmetro /S (Silencioso)
+            Start-Process -FilePath $UninstallPath -ArgumentList "/S" -Wait
+            Write-Output "✅ Removido com sucesso."
+        }
     }
 } else {
-    Write-Output "STATUS: NAO ENCONTRADO"
+    Write-Output "Nenhuma instalação encontrada."
 }
