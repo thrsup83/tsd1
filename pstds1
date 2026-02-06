@@ -1,14 +1,17 @@
-$Svc = Get-Service -Name "AdobeARMservice" -ErrorAction SilentlyContinue
-$Msi = Get-Process -Name "msiexec" -ErrorAction SilentlyContinue
-$Path = "C:\Program Files\Adobe\Acrobat DC\Acrobat\Acrobat.exe"
-$Log = "C:\Windows\Temp\AdobeARM.log"
+$Arm = "C:\Program Files (x86)\Common Files\Adobe\ARM\1.0\AdobeARM.exe"
+$Acrobat = "C:\Program Files\Adobe\Acrobat DC\Acrobat\Acrobat.exe"
 
-$Status = "Ready"
-if ($null -eq $Svc) { $Status = "Service Missing" }
-elseif ($Svc.Status -ne "Running") { $Status = "Service Stopped" }
-if ($Msi) { $Status = "Installing Now..." }
+$V1 = "N/A"
+if (Test-Path $Acrobat) { $V1 = (Get-Item $Acrobat).VersionInfo.ProductVersion }
 
-$LastLog = "No Log"
-if (Test-Path $Log) { $LastLog = Get-Content $Log -Tail 1 }
+Stop-Process -Name "AdobeARM" -Force -ErrorAction SilentlyContinue
+Get-Service -Name "AdobeARMservice" | Start-Service -ErrorAction SilentlyContinue
 
-"Status:$Status | Log:$LastLog"
+if (Test-Path $Arm) {
+    Start-Process -FilePath $Arm -ArgumentList "/noshowgui /silent /checknow /fallback" -Wait
+}
+
+$V2 = "N/A"
+if (Test-Path $Acrobat) { $V2 = (Get-Item $Acrobat).VersionInfo.ProductVersion }
+
+"V1:$V1 | V2:$V2"
