@@ -1,12 +1,31 @@
-Stop-Process -Name "notepad++" -Force -ErrorAction SilentlyContinue
+$AcrobatExe = "C:\Program Files\Adobe\Acrobat DC\Acrobat\Acrobat.exe"
+$AdobeArm = "C:\Program Files (x86)\Common Files\Adobe\ARM\1.0\AdobeARM.exe"
+$RegPath = "HKLM:\SOFTWARE\Adobe\Adobe Acrobat\DC\Installer"
 
-Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*", "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*" -ErrorAction SilentlyContinue | 
-Where-Object { $_.DisplayName -like "*Notepad++*" } | 
-ForEach-Object {
-    $u = $_.UninstallString -replace '"', ''
-    if ($u -and (Test-Path $u)) {
-        Write-Output "Uninstalling: $($_.DisplayName)"
-        Start-Process -FilePath $u -ArgumentList "/S" -Wait
-        Write-Output "Success"
-    }
+$InstallStatus = "Not Found"
+$CurrentVersion = "N/A"
+$InstallPath = "N/A"
+$ArmPath = "N/A"
+
+if (Test-Path $AcrobatExe) {
+    $InstallStatus = "Detected"
+    $CurrentVersion = (Get-Item $AcrobatExe).VersionInfo.ProductVersion
+    $InstallPath = $AcrobatExe
+} elseif (Test-Path $RegPath) {
+    $InstallStatus = "Detected (Registry)"
+    $CurrentVersion = (Get-ItemProperty -Path $RegPath -Name "VersionString" -ErrorAction SilentlyContinue).VersionString
+}
+
+if (Test-Path $AdobeArm) {
+    $ArmPath = $AdobeArm
+}
+
+[PSCustomObject]@{
+    ComputerName    = $env:COMPUTERNAME
+    Status          = $InstallStatus
+    AcrobatVersion  = $CurrentVersion
+    AcrobatPath     = $InstallPath
+    AdobeArmPath    = $ArmPath
+    OSArchitecture  = [Environment]::GetEnvironmentVariable("PROCESSOR_ARCHITECTURE")
+    CheckTimestamp  = (Get-Date -Format "MM/dd/yyyy HH:mm")
 }
