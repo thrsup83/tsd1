@@ -1,19 +1,49 @@
+$LogDir = "C:\temp"
+$LogFile = "$LogDir\adobelog1.log"
 $A64 = "C:\Program Files\Adobe\Acrobat DC\Acrobat\Acrobat.exe"
 $A32 = "C:\Program Files (x86)\Adobe\Acrobat DC\Acrobat\Acrobat.exe"
 $Arm = "C:\Program Files (x86)\Common Files\Adobe\ARM\1.0\AdobeARM.exe"
 
-$Target = if (Test-Path $A64) { $A64 } else { $A32 }
-$V1 = if (Test-Path $Target) { (Get-Item $Target).VersionInfo.ProductVersion } else { "N/A" }
+if (!(Test-Path $LogDir)) { New-Item -ItemType Directory -Path $LogDir | Out-Null }
 
-Stop-Process -Name "AdobeARM" -Force -ErrorAction SilentlyContinue
-Get-Service -Name "AdobeARMservice" | Start-Service -ErrorAction SilentlyContinue
-
-if (Test-Path $Arm) {
-    Start-Process -FilePath $Arm -ArgumentList "/noshowgui /silent /checknow" -Wait
-    Start-Sleep -Seconds 5
+function Write-OutputLog {
+    param([string]$Message)
+    $Stamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+    "[$Stamp] $Message" | Out-File -FilePath $LogFile -Append
 }
 
-$Msi = if (Get-Process -Name "msiexec" -ErrorAction SilentlyContinue) { "Working" } else { "Idle" }
-$V2 = if (Test-Path $Target) { (Get-Item $Target).VersionInfo.ProductVersion } else { "N/A" }
+Write-OutputLog "--- START DEBUG SESSION ---"
 
-"V1:$V1 | V2:$V2 | Installer:$Msi"
+$Target = if (Test-Path $A64) { $A64 } else { $A32 }
+Write-OutputLog "Target Path: $Target"
+
+if (Test-Path $Target) {
+    $Ver = (Get-Item $Target).VersionInfo.ProductVersion
+    Write-OutputLog "Current Version: $Ver"
+} else {
+    Write-OutputLog "Error: Acrobat executable not found."
+}
+
+$Svc = Get-Service -Name "AdobeARMservice" -ErrorAction SilentlyContinue
+if ($Svc) {
+    Write-OutputLog "Service Status: $($Svc.Status)"
+} else {
+    Write-OutputLog "Error: AdobeARMservice is missing."
+}
+
+Stop-Process -Name "AdobeARM" -Force -ErrorAction SilentlyContinue
+Write-OutputLog "Cleaned existing processes."
+
+if (Test-Path $Arm) {
+    Write-OutputLog "Executing AdobeARM update..."
+    try {
+        $Proc = Start-Process -FilePath $Arm -ArgumentList "/noshowgui /silent /checknow" -PassThru -Wait
+        Write-OutputLog "Execution finished. Exit Code: $($Proc.ExitCode)"
+    } catch {
+        Write-OutputLog "Exception: $($_.Exception.Message)"
+    }
+} else {
+    Write-OutputLog "Error: AdobeARM.exe not found at $Arm"
+}
+
+Write-OutputLog "--- END DEBUG SESSION ---"
