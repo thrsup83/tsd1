@@ -1,17 +1,19 @@
+$A64 = "C:\Program Files\Adobe\Acrobat DC\Acrobat\Acrobat.exe"
+$A32 = "C:\Program Files (x86)\Adobe\Acrobat DC\Acrobat\Acrobat.exe"
 $Arm = "C:\Program Files (x86)\Common Files\Adobe\ARM\1.0\AdobeARM.exe"
-$Acrobat = "C:\Program Files\Adobe\Acrobat DC\Acrobat\Acrobat.exe"
 
-$V1 = "N/A"
-if (Test-Path $Acrobat) { $V1 = (Get-Item $Acrobat).VersionInfo.ProductVersion }
+$Target = if (Test-Path $A64) { $A64 } else { $A32 }
+$V1 = if (Test-Path $Target) { (Get-Item $Target).VersionInfo.ProductVersion } else { "N/A" }
 
 Stop-Process -Name "AdobeARM" -Force -ErrorAction SilentlyContinue
 Get-Service -Name "AdobeARMservice" | Start-Service -ErrorAction SilentlyContinue
 
 if (Test-Path $Arm) {
-    Start-Process -FilePath $Arm -ArgumentList "/noshowgui /silent /checknow /fallback" -Wait
+    Start-Process -FilePath $Arm -ArgumentList "/noshowgui /silent /checknow" -Wait
+    Start-Sleep -Seconds 5
 }
 
-$V2 = "N/A"
-if (Test-Path $Acrobat) { $V2 = (Get-Item $Acrobat).VersionInfo.ProductVersion }
+$Msi = if (Get-Process -Name "msiexec" -ErrorAction SilentlyContinue) { "Working" } else { "Idle" }
+$V2 = if (Test-Path $Target) { (Get-Item $Target).VersionInfo.ProductVersion } else { "N/A" }
 
-"V1:$V1 | V2:$V2"
+"V1:$V1 | V2:$V2 | Installer:$Msi"
