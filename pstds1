@@ -1,31 +1,87 @@
-$AcrobatExe = "C:\Program Files\Adobe\Acrobat DC\Acrobat\Acrobat.exe"
-$AdobeArm = "C:\Program Files (x86)\Common Files\Adobe\ARM\1.0\AdobeARM.exe"
-$RegPath = "HKLM:\SOFTWARE\Adobe\Adobe Acrobat\DC\Installer"
+Microsoft
+Support
+Microsoft 365 Office Products Devices Account & billing Resources Buy Microsoft 365
+All Microsoft
+Search 
+Sign in to your account
+Sign in
+Install Microsoft 365 or Office
+Install Microsoft 365 or Office
+Redeem a product key
+Product keys
+Activate Office or Microsoft 365
+Language, 32/64-bit, and other options
+Install other apps
+Set up mobile devices
+Office or Microsoft 365 updates
+Update Office or Microsoft 365 on PC
+Update Office or Microsoft 365 for Mac
+Upgrade macOS
+Upgrade to the latest version
+Troubleshoot and uninstall
+How to update Microsoft 365 or Office for Windows
+Applies To
+On a Mac? See Check for Office for Mac updates automatically.
 
-$InstallStatus = "Not Found"
-$CurrentVersion = "N/A"
-$InstallPath = "N/A"
-$ArmPath = "N/A"
+If you're not sure what version of Office you have, see What version of Office am I using?​​​​​​​
 
-if (Test-Path $AcrobatExe) {
-    $InstallStatus = "Detected"
-    $CurrentVersion = (Get-Item $AcrobatExe).VersionInfo.ProductVersion
-    $InstallPath = $AcrobatExe
-} elseif (Test-Path $RegPath) {
-    $InstallStatus = "Detected (Registry)"
-    $CurrentVersion = (Get-ItemProperty -Path $RegPath -Name "VersionString" -ErrorAction SilentlyContinue).VersionString
-}
+How to update Office for Windows
+To check for Office for Windows updates, do the following:
 
-if (Test-Path $AdobeArm) {
-    $ArmPath = $AdobeArm
-}
+Open any Office app, such as Word, and create a new document.
 
-[PSCustomObject]@{
-    ComputerName    = $env:COMPUTERNAME
-    Status          = $InstallStatus
-    AcrobatVersion  = $CurrentVersion
-    AcrobatPath     = $InstallPath
-    AdobeArmPath    = $ArmPath
-    OSArchitecture  = [Environment]::GetEnvironmentVariable("PROCESSOR_ARCHITECTURE")
-    CheckTimestamp  = (Get-Date -Format "MM/dd/yyyy HH:mm")
-}
+Go to File > Account (or Office Account if you opened Outlook).
+
+Under Product Information, choose Update Options > Update Now.
+
+Note: You may need to click Enable Updates first if you don't see the Update Now option right away.
+
+Manually checking for Office updates in Word 2016
+Close the "You're up to date!" window after Office is done checking for and installing updates.
+
+You can also use the Update Options button to Disable Updates or to View Updates that were previously installed.
+
+Office for Windows update not working?
+If the Office for Windows update is not working:
+
+Make sure your PC is connected to the Internet. 
+
+If Update Options is missing and there's only the About button, you either have a volume license install or your company is using Group Policy to manage Office updates. Try Microsoft Update or contact your company help desk.
+
+To download an update manually, see Office Updates.
+
+If you would like to update Office but can't open any of your Office apps, try repairing Office.
+
+See Also
+Latest updates for versions of Office that use Windows Installer (MSI)
+
+When do I get the newest features for Microsoft 365?
+
+What's new in Microsoft 365
+
+Facebook LinkedIn Email
+Need more help?
+How can we help you?
+
+Want more options?
+Discover
+Community
+Contact Us
+Explore subscription benefits, browse training courses, learn how to secure your device, and more.
+
+
+
+Microsoft 365 subscription benefits
+
+
+
+Microsoft 365 training
+
+
+
+Microsoft security
+
+
+
+Accessibility center
+
