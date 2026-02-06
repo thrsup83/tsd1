@@ -1,49 +1,23 @@
-$LogDir = "C:\temp"
-$LogFile = "$LogDir\adobelog1.log"
-$A64 = "C:\Program Files\Adobe\Acrobat DC\Acrobat\Acrobat.exe"
-$A32 = "C:\Program Files (x86)\Adobe\Acrobat DC\Acrobat\Acrobat.exe"
 $Arm = "C:\Program Files (x86)\Common Files\Adobe\ARM\1.0\AdobeARM.exe"
-
-if (!(Test-Path $LogDir)) { New-Item -ItemType Directory -Path $LogDir | Out-Null }
-
-function Write-OutputLog {
-    param([string]$Message)
-    $Stamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-    "[$Stamp] $Message" | Out-File -FilePath $LogFile -Append
-}
-
-Write-OutputLog "--- START DEBUG SESSION ---"
-
-$Target = if (Test-Path $A64) { $A64 } else { $A32 }
-Write-OutputLog "Target Path: $Target"
-
-if (Test-Path $Target) {
-    $Ver = (Get-Item $Target).VersionInfo.ProductVersion
-    Write-OutputLog "Current Version: $Ver"
-} else {
-    Write-OutputLog "Error: Acrobat executable not found."
-}
-
-$Svc = Get-Service -Name "AdobeARMservice" -ErrorAction SilentlyContinue
-if ($Svc) {
-    Write-OutputLog "Service Status: $($Svc.Status)"
-} else {
-    Write-OutputLog "Error: AdobeARMservice is missing."
-}
+$Log = "C:\temp\adobelog1.log"
 
 Stop-Process -Name "AdobeARM" -Force -ErrorAction SilentlyContinue
-Write-OutputLog "Cleaned existing processes."
 
 if (Test-Path $Arm) {
-    Write-OutputLog "Executing AdobeARM update..."
-    try {
-        $Proc = Start-Process -FilePath $Arm -ArgumentList "/noshowgui /silent /checknow" -PassThru -Wait
-        Write-OutputLog "Execution finished. Exit Code: $($Proc.ExitCode)"
-    } catch {
-        Write-OutputLog "Exception: $($_.Exception.Message)"
+    Start-Process -FilePath $Arm -ArgumentList "/noshowgui /silent /checknow"
+    
+    $Timeout = 300
+    $Elapsed = 0
+    $Updated = $false
+    
+    while ($Elapsed -lt $Timeout) {
+        if (Get-Process -Name "msiexec" -ErrorAction SilentlyContinue) {
+            $Updated = $true
+            break
+        }
+        Start-Sleep -Seconds 10
+        $Elapsed += 10
     }
-} else {
-    Write-OutputLog "Error: AdobeARM.exe not found at $Arm"
 }
 
-Write-OutputLog "--- END DEBUG SESSION ---"
+if ($Updated) { "Status: Installing in background" } else { "Status: No activity detected" }
