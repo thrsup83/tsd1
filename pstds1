@@ -1,2 +1,6 @@
-$p = Get-CimInstance Win32_Processor
-if ($p.NumberOfLogicalProcessors -gt $p.NumberOfCores) { "HT = Enabled" } else { "HT = Disabled" }
+$p = Get-CimInstance Win32_Processor | Select-Object -First 1
+if ($null -eq $p) { 
+    "HT = NULL" 
+} else {
+    if ($p.NumberOfLogicalProcessors -gt $p.NumberOfCores) { "HT = Enabled" } else { "HT = Disabled" }
+}
