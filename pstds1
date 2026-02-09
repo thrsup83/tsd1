@@ -1,7 +1,16 @@
-select SMS_R_System.ResourceId, SMS_R_System.ResourceType, SMS_R_System.Name, 
-SMS_R_System.SMSUniqueIdentifier, SMS_R_System.ResourceDomainORWorkgroup, SMS_R_System.Client 
-from SMS_R_System 
-inner join SMS_G_System_ConfigPolicyComplianceState on 
-SMS_G_System_ConfigPolicyComplianceState.ResourceID = SMS_R_System.ResourceId 
-where SMS_G_System_ConfigPolicyComplianceState.ComplianceState = 2 
-and SMS_G_System_ConfigPolicyComplianceState.ConfigPolicyName = "NOME_DA_SUA_BASELINE"
+$p1 = "HKLM:\Software\Microsoft\Cryptography\Wintrust\Config"
+$p2 = "HKLM:\Software\Wow6432Node\Microsoft\Cryptography\Wintrust\Config"
+$v = "EnableCertPaddingCheck"
+
+if (!(Test-Path $p1) -and !(Test-Path $p2)) { 
+    return "Null" 
+}
+
+$v1 = (Get-ItemProperty -Path $p1 -Name $v -ErrorAction SilentlyContinue).$v
+$v2 = (Get-ItemProperty -Path $p2 -Name $v -ErrorAction SilentlyContinue).$v
+
+if ($v1 -eq "1" -and ($null -eq $v2 -or $v2 -eq "1")) {
+    return "Compliant"
+} else {
+    return "Non-Compliant"
+}
