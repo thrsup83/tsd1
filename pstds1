@@ -1,20 +1,13 @@
-$p1 = "SOFTWARE\Microsoft\Cryptography\Wintrust\Config"
-$p2 = "SOFTWARE\Wow6432Node\Microsoft\Cryptography\Wintrust\Config"
-$v = "EnableCertPaddingCheck"
-
-# Abre o registro diretamente via .NET (mais estável no 2012)
+$p = "SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management"
+$m = "FeatureSettingsOverrideMask"
+$o = "FeatureSettingsOverride"
 $reg = [Microsoft.Win32.Registry]::LocalMachine
-$k1 = $reg.OpenSubKey($p1)
-$k2 = $reg.OpenSubKey($p2)
+$k = $reg.OpenSubKey($p)
 
-$v1 = if ($k1) { $k1.GetValue($v) } else { $null }
-$v2 = if ($k2) { $k2.GetValue($v) } else { $null }
+$vm = if($k){$k.GetValue($m)}else{$null}
+$vo = if($k){$k.GetValue($o)}else{$null}
 
-$r1 = if ($null -eq $v1) { "Null" } else { [string]$v1 }
-$r2 = if ($null -eq $v2) { "Null" } else { [string]$v2 }
+$rm = if($null -eq $vm){"Null"}else{"0x...$(("{0:X}" -f $vm)) ($vm)"}
+$ro = if($null -eq $vo){"Null"}else{"0x...$(("{0:X}" -f $vo)) ($vo)"}
 
-if ($r1 -eq $r2) {
-    $r1
-} else {
-    "x64:$r1 | x32:$r2"
-}
+"M:$rm | O:$ro"
