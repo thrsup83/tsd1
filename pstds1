@@ -1,16 +1,20 @@
-$p1 = "HKLM:\Software\Microsoft\Cryptography\Wintrust\Config"
-$p2 = "HKLM:\Software\Wow6432Node\Microsoft\Cryptography\Wintrust\Config"
+$p1 = "SOFTWARE\Microsoft\Cryptography\Wintrust\Config"
+$p2 = "SOFTWARE\Wow6432Node\Microsoft\Cryptography\Wintrust\Config"
 $v = "EnableCertPaddingCheck"
 
-if (!(Test-Path $p1) -and !(Test-Path $p2)) { 
-    return "Null" 
-}
+# Abre o registro diretamente via .NET (mais estável no 2012)
+$reg = [Microsoft.Win32.Registry]::LocalMachine
+$k1 = $reg.OpenSubKey($p1)
+$k2 = $reg.OpenSubKey($p2)
 
-$v1 = (Get-ItemProperty -Path $p1 -Name $v -ErrorAction SilentlyContinue).$v
-$v2 = (Get-ItemProperty -Path $p2 -Name $v -ErrorAction SilentlyContinue).$v
+$v1 = if ($k1) { $k1.GetValue($v) } else { $null }
+$v2 = if ($k2) { $k2.GetValue($v) } else { $null }
 
-if ($v1 -eq "1" -and ($null -eq $v2 -or $v2 -eq "1")) {
-    return "Compliant"
+$r1 = if ($null -eq $v1) { "Null" } else { [string]$v1 }
+$r2 = if ($null -eq $v2) { "Null" } else { [string]$v2 }
+
+if ($r1 -eq $r2) {
+    $r1
 } else {
-    return "Non-Compliant"
+    "x64:$r1 | x32:$r2"
 }
