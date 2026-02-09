@@ -1,6 +1,2 @@
 $p = Get-CimInstance Win32_Processor
-$s = if ($p.NumberOfLogicalProcessors -gt $p.NumberOfCores) { "Enabled" } else { "Disabled" }
-return [PSCustomObject]@{
-    HT_Status = $s
-    Cores = "$($p.NumberOfCores)C/$($p.NumberOfLogicalProcessors)P"
-}
+if ($p.NumberOfLogicalProcessors -gt $p.NumberOfCores) { "HT = Enabled" } else { "HT = Disabled" }
