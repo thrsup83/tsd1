@@ -1,23 +1,7 @@
-$Arm = "C:\Program Files (x86)\Common Files\Adobe\ARM\1.0\AdobeARM.exe"
-$Log = "C:\temp\adobelog1.log"
-
-Stop-Process -Name "AdobeARM" -Force -ErrorAction SilentlyContinue
-
-if (Test-Path $Arm) {
-    Start-Process -FilePath $Arm -ArgumentList "/noshowgui /silent /checknow"
-    
-    $Timeout = 300
-    $Elapsed = 0
-    $Updated = $false
-    
-    while ($Elapsed -lt $Timeout) {
-        if (Get-Process -Name "msiexec" -ErrorAction SilentlyContinue) {
-            $Updated = $true
-            break
-        }
-        Start-Sleep -Seconds 10
-        $Elapsed += 10
-    }
-}
-
-if ($Updated) { "Status: Installing in background" } else { "Status: No activity detected" }
+select SMS_R_System.ResourceId, SMS_R_System.ResourceType, SMS_R_System.Name, 
+SMS_R_System.SMSUniqueIdentifier, SMS_R_System.ResourceDomainORWorkgroup, SMS_R_System.Client 
+from SMS_R_System 
+inner join SMS_G_System_ConfigPolicyComplianceState on 
+SMS_G_System_ConfigPolicyComplianceState.ResourceID = SMS_R_System.ResourceId 
+where SMS_G_System_ConfigPolicyComplianceState.ComplianceState = 2 
+and SMS_G_System_ConfigPolicyComplianceState.ConfigPolicyName = "NOME_DA_SUA_BASELINE"
