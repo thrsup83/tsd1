@@ -1,9 +1,6 @@
-$Proc = Get-CimInstance Win32_Processor
-$HTStatus = if ($Proc.NumberOfLogicalProcessors -gt $Proc.NumberOfCores) { "Enabled" } else { "Disabled" }
-
+$p = Get-CimInstance Win32_Processor
+$s = if ($p.NumberOfLogicalProcessors -gt $p.NumberOfCores) { "Enabled" } else { "Disabled" }
 return [PSCustomObject]@{
-    CPU_Model  = $Proc.Name
-    Physical   = $Proc.NumberOfCores
-    Logical    = $Proc.NumberOfLogicalProcessors
-    HT_Status  = $HTStatus
+    HT_Status = $s
+    Cores = "$($p.NumberOfCores)C/$($p.NumberOfLogicalProcessors)P"
 }
