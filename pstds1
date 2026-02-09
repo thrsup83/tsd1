@@ -1,11 +1,9 @@
-$p = "SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management"
-$reg = [Microsoft.Win32.Registry]::LocalMachine
-$k = $reg.OpenSubKey($p)
+$Proc = Get-CimInstance Win32_Processor
+$HTStatus = if ($Proc.NumberOfLogicalProcessors -gt $Proc.NumberOfCores) { "Enabled" } else { "Disabled" }
 
-$vm = if($k){$k.GetValue("FeatureSettingsOverrideMask")}else{$null}
-$vo = if($k){$k.GetValue("FeatureSettingsOverride")}else{$null}
-
-$r1 = if($null -eq $vm){"Null"}else{"0x$("{0:X}" -f [int]$vm) ($vm)"}
-$r2 = if($null -eq $vo){"Null"}else{"0x$("{0:X}" -f [int]$vo) ($vo)"}
-
-"M:$r1 | O:$r2"
+return [PSCustomObject]@{
+    CPU_Model  = $Proc.Name
+    Physical   = $Proc.NumberOfCores
+    Logical    = $Proc.NumberOfLogicalProcessors
+    HT_Status  = $HTStatus
+}
