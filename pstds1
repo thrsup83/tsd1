@@ -1,13 +1,11 @@
 $p = "SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management"
-$m = "FeatureSettingsOverrideMask"
-$o = "FeatureSettingsOverride"
 $reg = [Microsoft.Win32.Registry]::LocalMachine
 $k = $reg.OpenSubKey($p)
 
-$vm = if($k){$k.GetValue($m)}else{$null}
-$vo = if($k){$k.GetValue($o)}else{$null}
+$vm = if($k){$k.GetValue("FeatureSettingsOverrideMask")}else{$null}
+$vo = if($k){$k.GetValue("FeatureSettingsOverride")}else{$null}
 
-$rm = if($null -eq $vm){"Null"}else{"0x...$(("{0:X}" -f $vm)) ($vm)"}
-$ro = if($null -eq $vo){"Null"}else{"0x...$(("{0:X}" -f $vo)) ($vo)"}
+$r1 = if($null -eq $vm){"Null"}else{"0x$("{0:X}" -f [int]$vm) ($vm)"}
+$r2 = if($null -eq $vo){"Null"}else{"0x$("{0:X}" -f [int]$vo) ($vo)"}
 
-"M:$rm | O:$ro"
+"M:$r1 | O:$r2"
