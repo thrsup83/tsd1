@@ -1,6 +1,12 @@
-$p = Get-CimInstance Win32_Processor | Select-Object -First 1
-if ($null -eq $p) { 
-    "HT = NULL" 
-} else {
-    if ($p.NumberOfLogicalProcessors -gt $p.NumberOfCores) { "HT = Enabled" } else { "HT = Disabled" }
+$RegistryPaths = @("HKLM:\Software\Microsoft\Cryptography\Wintrust\Config")
+
+if ([Environment]::Is64BitOperatingSystem) {
+    $RegistryPaths += "HKLM:\Software\Wow6432Node\Microsoft\Cryptography\Wintrust\Config"
+}
+
+foreach ($Path in $RegistryPaths) {
+    if (-not (Test-Path $Path)) {
+        New-Item -Path $Path -Force | Out-Null
+    }
+    Set-ItemProperty -Path $Path -Name "EnableCertPaddingCheck" -Value "1" -PropertyType String -Force | Out-Null
 }
