@@ -1,15 +1,7 @@
-$OfficeApps = "winword", "excel", "outlook", "powerpnt", "onenote", "msaccess"
-$RunningApps = Get-Process -Name $OfficeApps -ErrorAction SilentlyContinue
+$LoggedUser = Get-CimInstance -ClassName Win32_ComputerSystem | Select-Object -ExpandProperty UserName
 
-if ($RunningApps) {
-    Write-Output "Office applications are currently running. Aborting update to avoid pending state."
+if ($LoggedUser) {
     exit 1
 } else {
-    $C2RPath = "C:\Program Files\Common Files\microsoft shared\ClickToRun\OfficeC2RClient.exe"
-    if (Test-Path $C2RPath) {
-        Start-Process -FilePath $C2RPath -ArgumentList "/update user" -Wait
-        exit 0
-    } else {
-        exit 1
-    }
+    exit 0
 }
