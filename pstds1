@@ -1,21 +1,8 @@
-$Paths = @(
-    "HKLM:\Software\Microsoft\Cryptography\Wintrust\Config",
-    "HKLM:\Software\Wow6432Node\Microsoft\Cryptography\Wintrust\Config"
-)
+$RegistryPath = "HKLM:\SOFTWARE\Microsoft\Office\ClickToRun\Configuration"
+$VersionValue = "VersionToReport"
 
-foreach ($Path in $Paths) {
-    if (!(Test-Path $Path)) {
-        New-Item -Path $Path -Force | Out-Null
-    }
-    New-ItemProperty -Path $Path -Name "EnableCertPaddingCheck" -Value "1" -PropertyType String -Force | Out-Null
-}
-
-Write-Host "--- Verification Results ---" -ForegroundColor Yellow
-foreach ($Path in $Paths) {
-    $val = Get-ItemPropertyValue -Path $Path -Name "EnableCertPaddingCheck" -ErrorAction SilentlyContinue
-    if ($val -eq "1") {
-        Write-Host "[OK] $Path -> Value: $val" -ForegroundColor Green
-    } else {
-        Write-Host "[FAILED] $Path -> Value not found or incorrect!" -ForegroundColor Red
-    }
+if (Test-Path $RegistryPath) {
+    (Get-ItemProperty -Path $RegistryPath).$VersionValue
+} else {
+    exit 1
 }
