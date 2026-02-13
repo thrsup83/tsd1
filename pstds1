@@ -1,8 +1,15 @@
-$RegistryPath = "HKLM:\SOFTWARE\Microsoft\Office\ClickToRun\Configuration"
-$VersionValue = "VersionToReport"
+$OfficeApps = "winword", "excel", "outlook", "powerpnt", "onenote", "msaccess"
+$RunningApps = Get-Process -Name $OfficeApps -ErrorAction SilentlyContinue
 
-if (Test-Path $RegistryPath) {
-    (Get-ItemProperty -Path $RegistryPath).$VersionValue
-} else {
+if ($RunningApps) {
+    Write-Output "Office applications are currently running. Aborting update to avoid pending state."
     exit 1
+} else {
+    $C2RPath = "C:\Program Files\Common Files\microsoft shared\ClickToRun\OfficeC2RClient.exe"
+    if (Test-Path $C2RPath) {
+        Start-Process -FilePath $C2RPath -ArgumentList "/update user" -Wait
+        exit 0
+    } else {
+        exit 1
+    }
 }
