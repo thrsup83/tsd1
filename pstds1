@@ -1,4 +1,11 @@
-$Config = Get-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Office\ClickToRun\Configuration"
-if ($Config.CDNBaseUrl -match "492350f6-3a01-4f97-b9c0-c7c6ddf67d60") {
-    $Config.VersionToReport
+$path = "C:\Program Files\Google\Chrome\Application\chrome.exe"
+if (-not (Test-Path $path)) {
+    $path = "C:\Program Files (x86)\Google\Chrome\Application\chrome.exe"
+}
+
+if (Test-Path $path) {
+    $bytes = [System.IO.File]::ReadAllBytes($path)
+    $offset = [System.BitConverter]::ToUInt32($bytes, 0x3c)
+    $machine = [System.BitConverter]::ToUInt16($bytes, $offset + 4)
+    if ($machine -eq 0x8664) { "64" } else { "32" }
 }
