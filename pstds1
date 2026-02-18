@@ -1,7 +1,4 @@
-$LoggedUser = Get-CimInstance -ClassName Win32_ComputerSystem | Select-Object -ExpandProperty UserName
-
-if ($LoggedUser) {
-    exit 1
-} else {
-    exit 0
+$Config = Get-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Office\ClickToRun\Configuration"
+if ($Config.CDNBaseUrl -match "492350f6-3a01-4f97-b9c0-c7c6ddf67d60") {
+    $Config.VersionToReport
 }
