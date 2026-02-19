@@ -1,11 +1,30 @@
-$path = "C:\Program Files\Google\Chrome\Application\chrome.exe"
-if (-not (Test-Path $path)) {
-    $path = "C:\Program Files (x86)\Google\Chrome\Application\chrome.exe"
-}
+Implementation Plan
+Package Acquisition: Download the latest Google Chrome Enterprise (MSI) 64-bit binaries from the official Google vendor repository.
 
-if (Test-Path $path) {
-    $bytes = [System.IO.File]::ReadAllBytes($path)
-    $offset = [System.BitConverter]::ToUInt32($bytes, 0x3c)
-    $machine = [System.BitConverter]::ToUInt16($bytes, $offset + 4)
-    if ($machine -eq 0x8664) { "64" } else { "32" }
-}
+SCCM Application Creation: Create the application in the SCCM console, configuring silent installation parameters (e.g., msiexec /i "GoogleChromeStandaloneEnterprise64.msi" /qn /norestart /l*v "C:\Windows\Temp\Chrome_Install.log").
+
+Content Distribution: Distribute the application content to the designated Distribution Points (DPs) and verify the "Success" status in the Content Monitoring tab.
+
+Targeting & Collection Refresh: Update the target Device Collection with the specific servers. Perform a membership evaluation to ensure all intended nodes are correctly listed.
+
+Deployment Scheduling: Create a "Required" deployment. Set the deadline to trigger within the approved maintenance window to ensure zero impact during business hours.
+
+Progress Monitoring: Monitor the Deployment Status through the SCCM Monitoring node to track real-time compliance and identify any "In Progress" or "Error" states.
+
+Test Plan
+Console Verification: Review the SCCM Deployment Status dashboard to ensure the compliance rate is trending toward 100%.
+
+Automated Validation: Execute the PowerShell script Check-ChromeVersion against the collection to programmatically confirm that the executable version matches the intended release.
+
+Log Analysis: Randomly sample target servers and inspect the AppEnforce.log and the custom install log in C:\Windows\Temp\ to verify exit code 0 (Success).
+
+Application Launch: Perform a manual smoke test on a subset of servers to ensure the browser launches correctly and no GPO conflicts are present.
+
+Backout Plan
+Deployment Deletion: Immediately delete or disable the current "Required" deployment in SCCM to stop any further installations.
+
+Rollback Package: Create and deploy a "Uninstall" application targeted at the same collection to remove the problematic version.
+
+Legacy Restoration: Re-deploy the previous stable version package to the collection if a specific version is required for business continuity.
+
+Manual Remediation: If the automated rollback fails on specific nodes, execute the MSI uninstall string via remote PowerShell or manual intervention on affected servers.
