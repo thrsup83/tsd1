@@ -1,5 +1,27 @@
-Configuration Reversion: Revert the deployment targeting in the SCCM console and initiate the removal of the current update package.
+$Processes = @("chrome", "googleupdate", "GoogleUpdate.exe", "GoogleCrashHandler", "GoogleCrashHandler64")
+foreach ($P in $Processes) { Stop-Process -Name $P -Force -ErrorAction SilentlyContinue }
 
-Baseline Restoration: Re-deploy the previous stable version (Baseline) to the collection to ensure the environment returns to its known standard state.
+$Services = @("gupdate", "gupdatem")
+foreach ($S in $Services) { Stop-Service -Name $S -ErrorAction SilentlyContinue }
 
-Endpoint Alignment: If any node does not automatically align with the baseline version, perform a manual re-installation of the stable MSI to ensure 100% service consistency.
+$Folders = @(
+    "$env:ProgramFiles\Google\Chrome",
+    "${env:ProgramFiles(x86)}\Google\Chrome",
+    "$env:LOCALAPPDATA\Google\Chrome",
+    "$env:ProgramData\Google\Chrome"
+)
+foreach ($F in $Folders) { if (Test-Path $F) { Remove-Item -Path $F -Recurse -Force -ErrorAction SilentlyContinue } }
+
+$RegKeys = @(
+    "HKLM:\SOFTWARE\Google\Chrome",
+    "HKLM:\SOFTWARE\Wow6432Node\Google\Chrome",
+    "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Google Chrome",
+    "HKCU:\Software\Google\Chrome",
+    "HKCU:\Software\Google\Update\Clients",
+    "HKLM:\SOFTWARE\Wow6432Node\Google\Update\Clients"
+)
+foreach ($K in $RegKeys) { if (Test-Path $K) { Remove-Item -Path $K -Recurse -Force -ErrorAction SilentlyContinue } }
+
+Get-ScheduledTask -TaskName "GoogleUpdate*" -ErrorAction SilentlyContinue | Unregister-ScheduledTask -Confirm:$false -ErrorAction SilentlyContinue
+
+Write-Host "Cleanup completed." -ForegroundColor Green
