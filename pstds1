@@ -1,26 +1,11 @@
-msiexec.exe /i "googlechromestandaloneenterprise64.msi" REINSTALLMODE=vomus REINSTALL=ALL /qn /norestart ALLUSERS=1
+$p64 = "HKLM:\SOFTWARE\Microsoft\Internet Explorer\Main\FeatureControl\FEATURE_ENABLE_PRINT_INFO_DISCLOSURE_FIX"
+$p86 = "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Internet Explorer\Main\FeatureControl\FEATURE_ENABLE_PRINT_INFO_DISCLOSURE_FIX"
+$n   = "iexplore.exe"
 
+$v64 = if (Test-Path $p64) { (Get-ItemProperty $p64 -Name $n -EA 0).$n } else { "Missing" }
+$v86 = if (Test-Path $p86) { (Get-ItemProperty $p86 -Name $n -EA 0).$n } else { "Missing" }
 
+if ($null -eq $v64) { $v64 = "NotFound" }
+if ($null -eq $v86) { $v86 = "NotFound" }
 
-
-$RegistryTargets = @(
-    "HKLM:\SOFTWARE\Google\Chrome",
-    "HKLM:\SOFTWARE\WOW6432Node\Google\Chrome",
-    "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Google Chrome",
-    "HKLM:\SOFTWARE\Classes\Installer\Products\6615F27288E02E43AB81AA4F2CAD7F9A"
-)
-
-foreach ($Path in $RegistryTargets) {
-    if (Test-Path $Path) {
-        Takeown /f $Path /r /d y 2>$null
-        Remove-Item -Path $Path -Recurse -Force -ErrorAction SilentlyContinue
-    }
-}
-
-$MsiProducts = Get-ChildItem -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Installer\UserData\S-1-5-18\Products"
-foreach ($Product in $MsiProducts) {
-    $Value = Get-ItemProperty -Path $Product.PSPath -Name "ProductName" -ErrorAction SilentlyContinue
-    if ($Value.ProductName -match "Google Chrome") {
-        Remove-Item -Path $Product.PSPath -Recurse -Force -ErrorAction SilentlyContinue
-    }
-}
+Write-Host "x64: $v64 | x32: $v86"
