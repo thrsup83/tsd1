@@ -1,1 +1,63 @@
 msiexec.exe /i "googlechromestandaloneenterprise64.msi" REINSTALLMODE=vomus REINSTALL=ALL /qn /norestart ALLUSERS=1
+
+
+
+
+$ProductName = "Google Chrome"
+
+# 1. Kill Processes & Services
+$Procs = @("chrome", "googleupdate", "GoogleUpdate", "GoogleCrashHandler")
+$Procs | ForEach-Object { Stop-Process -Name $_ -Force -ErrorAction SilentlyContinue }
+
+$Servs = @("gupdate", "gupdatem")
+$Servs | ForEach-Object { Stop-Service -Name $_ -ErrorAction SilentlyContinue }
+
+# 2. MSI Database Cleanup (The 1638 Fix)
+$MsiPaths = @(
+    "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Installer\UserData\S-1-5-18\Products",
+    "HKLM:\SOFTWARE\Classes\Installer\Products",
+    "HKCR:\Installer\Products",
+    "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall",
+    "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall"
+)
+
+foreach ($Loc in $MsiPaths) {
+    if (Test-Path $Loc) {
+        Get-ChildItem -Path $Loc | ForEach-Object {
+            $Name = Get-ItemProperty -Path $_.PSPath -Name "ProductName", "DisplayName" -ErrorAction SilentlyContinue
+            if ($Name.ProductName -match $ProductName -or $Name.DisplayName -match $ProductName) {
+                Write-Host "Deleting MSI Record: $($_.PSPath)" -ForegroundColor Yellow
+                Remove-Item -Path $_.PSPath -Recurse -Force
+            }
+        }
+    }
+}
+
+# 3. Specific Google Update Keys
+$GoogleKeys = @(
+    "HKLM:\SOFTWARE\Google\Update\Clients",
+    "HKLM:\SOFTWARE\WOW6432Node\Google\Update\Clients",
+    "HKCU:\Software\Google\Chrome",
+    "HKLM:\SOFTWARE\Google\Chrome"
+)
+
+foreach ($Key in $GoogleKeys) {
+    if (Test-Path $Key) { Remove-Item -Path $Key -Recurse -Force }
+}
+
+# 4. File System Cleanup
+$Paths = @(
+    "$env:ProgramFiles\Google\Chrome",
+    "${env:ProgramFiles(x86)}\Google\Chrome",
+    "$env:LOCALAPPDATA\Google\Chrome",
+    "$env:ProgramData\Google\Chrome"
+)
+
+foreach ($Path in $Paths) {
+    if (Test-Path $Path) { Remove-Item -Path $Path -Recurse -Force }
+}
+
+# 5. Scheduled Tasks
+Get-ScheduledTask -TaskName "GoogleUpdate*" -ErrorAction SilentlyContinue | Unregister-ScheduledTask -Confirm:$false
+
+Write-Host "Scorched Earth Cleanup Complete." -ForegroundColor Green
