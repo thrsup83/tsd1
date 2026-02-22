@@ -1,1 +1,1 @@
-sc create "Nessus Agent" binPath= "\"C:\Program Files\Tenable\Nessus Agent\nessus-service.exe\"" start= auto displayname= "Nessus Agent"
+"C:\Program Files\Tenable\Nessus Agent\nessuscli.exe" --version
