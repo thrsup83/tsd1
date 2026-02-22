@@ -1,13 +1,16 @@
-:: 1. Mata qualquer resquício do instalador e do agente antigo
-taskkill /F /IM msiexec.exe /T >nul 2>&1
+taskkill /F /IM nessus-service.exe /T >nul 2>&1
 taskkill /F /IM nessus-agent-module.exe /T >nul 2>&1
-taskkill /F /IM nessusd.exe /T >nul 2>&1
 
-:: 2. Deleta o serviço que a gente criou "errado"
+###
+
+:: Deleta novamente para garantir que saiu do estado 1072
 sc delete "Nessus Agent"
 
-:: 3. Cria o serviço apontando para o Service Wrapper (o jeito certo)
-sc create "Nessus Agent" binPath= "C:\Program Files\Tenable\Nessus Agent\nessus-service.exe" start= auto displayname= "Nessus Agent" type= own
+:: Cria o serviço com o binário correto e aspas no caminho
+sc create "Nessus Agent" binPath= "\"C:\Program Files\Tenable\Nessus Agent\nessus-service.exe\"" start= auto displayname= "Nessus Agent"
 
-:: 4. Tenta subir de novo
+
+####
+
+
 net start "Nessus Agent"
