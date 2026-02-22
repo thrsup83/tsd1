@@ -1,1 +1,1 @@
-msiexec.exe /i "C:\temp\rev1\Nessus\NessusAgent.msi" /qn /norestart
+msiexec /a "C:\temp\rev1\Nessus\NessusAgent.msi" /qb TARGETDIR="C:\Nessus_Extraido"
