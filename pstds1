@@ -1,16 +1,1 @@
-taskkill /F /IM nessus-service.exe /T >nul 2>&1
-taskkill /F /IM nessus-agent-module.exe /T >nul 2>&1
-
-###
-
-:: Deleta novamente para garantir que saiu do estado 1072
-sc delete "Nessus Agent"
-
-:: Cria o serviço com o binário correto e aspas no caminho
 sc create "Nessus Agent" binPath= "\"C:\Program Files\Tenable\Nessus Agent\nessus-service.exe\"" start= auto displayname= "Nessus Agent"
-
-
-####
-
-
-net start "Nessus Agent"
