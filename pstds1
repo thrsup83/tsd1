@@ -1,3 +1,1 @@
-taskkill /F /IM nessus-agent-module.exe /T
-taskkill /F /IM nessusd.exe /T
-sc stop "Nessus Agent"
+msiexec.exe /i "C:\temp\rev1\Nessus\NessusAgent.msi" /qn /norestart
