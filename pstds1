@@ -1,26 +1,65 @@
-@echo off
-setlocal
+$installPath = 'C:\temp\rev1'
+$nessusInstaller = Join-Path $installPath 'Nessus\NessusAgent.msi'
+$nessusLogs = 'C:\Windows\Temp\Nessus_Agent_1062_Install.log'
+$nessusGroups = 'Windows'
+$nessusServer = '10.184.152.170:8834'
+$nessusKey = 'XXX'
 
-set "installPath=C:\temp\rev1"
-set "nessusInstaller=%installPath%\Nessus\NessusAgent.msi"
-set "nessusLogs=C:\Windows\Temp\Nessus_Agent_1062_Install.log"
-set "nessusGroups=Windows"
-set "nessusServer=XXX"
-set "nessusKey=XXX"
+function Write-Log {
+    param([string]$Message)
+    $time = (Get-Date).ToString('yyyy-MM-dd HH:mm:ss')
+    "$time`t$Message" | Out-File -FilePath $nessusLogs -Append -Encoding UTF8
+}
 
-if exist "%nessusInstaller%" (
-    reg delete "HKEY_LOCAL_MACHINE\SOFTWARE\Tenable\TAG" /f >nul 2>&1
-    rd /s /q "C:\ProgramData\Tenable\Nessus Agent" >nul 2>&1
-    
-    msiexec.exe /i "%nessusInstaller%" NESSUS_GROUPS="%nessusGroups%" NESSUS_SERVER="%nessusServer%" NESSUS_KEY=%nessusKey% /qn /norestart /l*v "%nessusLogs%"
+if (Test-Path -Path $nessusInstaller) {
+    Write-Log "[INFO] Installer found at $nessusInstaller"
 
-    if %errorlevel% equ 0 (
-        echo [OK] Nessus Agent installation command executed.
-    ) else (
-        echo [ERROR] Installation failed with Exit Code: %errorlevel%
+    try {
+        Remove-Item -Path 'HKLM:\SOFTWARE\Tenable\TAG' -Recurse -Force -ErrorAction Stop
+        Write-Log "[INFO] Removed Tenable\TAG registry key"
+    } catch {
+        Write-Log "[WARN] Could not remove registry key or it does not exist: $_"
+    }
+
+    $agentPath = 'C:\ProgramData\Tenable\Nessus Agent'
+    try {
+        if (Test-Path -Path $agentPath) {
+            Remove-Item -Path $agentPath -Recurse -Force -ErrorAction Stop
+            Write-Log "[INFO] Removed agent folder: $agentPath"
+        } else {
+            Write-Log "[INFO] Agent folder does not exist: $agentPath"
+        }
+    } catch {
+        Write-Log "[WARN] Failed to remove agent folder: $_"
+    }
+
+    $args = @(
+        '/i'
+        "`"$nessusInstaller`""
+        "NESSUS_GROUPS=`"$nessusGroups`""
+        "NESSUS_SERVER=`"$nessusServer`""
+        "NESSUS_KEY=`"$nessusKey`""
+        '/qn'
+        '/norestart'
+        '/l*v'
+        "`"$nessusLogs`""
     )
-) else (
-    echo [ERROR] Installer file not found at: %nessusInstaller%
-)
 
-pause
+    Write-Log "[INFO] Starting msiexec with arguments: $($args -join ' ')"
+
+    $proc = Start-Process -FilePath 'msiexec.exe' -ArgumentList $args -Wait -NoNewWindow -PassThru
+
+    $exitCode = $proc.ExitCode
+    if ($exitCode -eq 0) {
+        Write-Log "[OK] Installation command executed successfully. ExitCode=0"
+        Write-Output "[OK] Nessus Agent installation command executed."
+    } else {
+        Write-Log "[ERROR] Installation failed with ExitCode: $exitCode"
+        Write-Output "[ERROR] Installation failed with Exit Code: $exitCode"
+    }
+} else {
+    Write-Log "[ERROR] Installer not found at: $nessusInstaller"
+    Write-Output "[ERROR] Installer file not found at: $nessusInstaller"
+}
+
+Read-Host -Prompt 'Press Enter to continue'
