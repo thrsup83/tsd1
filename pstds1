@@ -5,18 +5,14 @@ set "installPath=C:\temp\rev1"
 set "nessusInstaller=%installPath%\Nessus\NessusAgent.msi"
 set "nessusLogs=C:\Windows\Temp\Nessus_Agent_1062_Install.log"
 set "nessusGroups=Windows"
-set "nessusServer=1XXXXXX"
+set "nessusServer=XXX"
 set "nessusKey=XXX"
 
 if exist "%nessusInstaller%" (
     reg delete "HKEY_LOCAL_MACHINE\SOFTWARE\Tenable\TAG" /f >nul 2>&1
     rd /s /q "C:\ProgramData\Tenable\Nessus Agent" >nul 2>&1
     
-    msiexec.exe /i "%nessusInstaller%" ^
-    NESSUS_GROUPS="%nessusGroups%" ^
-    NESSUS_SERVER="%nessusServer%" ^
-    NESSUS_KEY=%nessusKey% ^
-    /qn /norestart /l*v "%nessusLogs%"
+    msiexec.exe /i "%nessusInstaller%" NESSUS_GROUPS="%nessusGroups%" NESSUS_SERVER="%nessusServer%" NESSUS_KEY=%nessusKey% /qn /norestart /l*v "%nessusLogs%"
 
     if %errorlevel% equ 0 (
         echo [OK] Nessus Agent installation command executed.
