@@ -1,17 +1,13 @@
-:: Cria as pastas de destino
-mkdir "C:\Program Files\Tenable\Nessus Agent"
-mkdir "C:\ProgramData\Tenable\Nessus Agent"
+:: 1. Mata qualquer resquício do instalador e do agente antigo
+taskkill /F /IM msiexec.exe /T >nul 2>&1
+taskkill /F /IM nessus-agent-module.exe /T >nul 2>&1
+taskkill /F /IM nessusd.exe /T >nul 2>&1
 
-:: Copia os binários (program files)
-xcopy "C:\Nessus_Manual\program files\Tenable\Nessus Agent\*.*" "C:\Program Files\Tenable\Nessus Agent\" /E /I /H /Y
+:: 2. Deleta o serviço que a gente criou "errado"
+sc delete "Nessus Agent"
 
-:: Copia os arquivos de dados (CommonAppData)
-xcopy "C:\Nessus_Manual\CommonAppData\Tenable\Nessus Agent\*.*" "C:\ProgramData\Tenable\Nessus Agent\" /E /I /H /Y
+:: 3. Cria o serviço apontando para o Service Wrapper (o jeito certo)
+sc create "Nessus Agent" binPath= "C:\Program Files\Tenable\Nessus Agent\nessus-service.exe" start= auto displayname= "Nessus Agent" type= own
 
-
-sc create "Nessus Agent" binPath= "C:\Program Files\Tenable\Nessus Agent\nessus-agent-module.exe" start= auto displayname= "Nessus Agent"
-
-sc description "Nessus Agent" "Tenable Nessus Agent"
-
-
+:: 4. Tenta subir de novo
 net start "Nessus Agent"
