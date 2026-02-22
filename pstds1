@@ -2,7 +2,7 @@ $installPath = 'C:\temp\rev1'
 $nessusInstaller = Join-Path $installPath 'Nessus\NessusAgent.msi'
 $nessusLogs = 'C:\Windows\Temp\Nessus_Agent_1062_Install.log'
 $nessusGroups = 'Windows'
-$nessusServer = '10.184.152.170:8834'
+$nessusServer = 'XXX'
 $nessusKey = 'XXX'
 
 function Write-Log {
