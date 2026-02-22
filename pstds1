@@ -1,36 +1,3 @@
-@echo off
-setlocal
-
-set "installPath=C:\temp\rev1"
-set "nessusInstaller=%installPath%\Nessus\NessusAgent.msi"
-set "nessusLogs=C:\Windows\Temp\Nessus_Agent_1062_Install.log"
-set "nessusGroups=Windows"
-set "nessusServer=XXX"
-set "nessusKey=XXX"
-
-if exist "%nessusInstaller%" (
-    echo %DATE% %TIME% [INFO] Installer found at %nessusInstaller% >> "%nessusLogs%"
-    
-    reg delete "HKEY_LOCAL_MACHINE\SOFTWARE\Tenable\TAG" /f >nul 2>&1
-    echo %DATE% %TIME% [INFO] Registry cleanup attempt finished >> "%nessusLogs%"
-    
-    if exist "C:\ProgramData\Tenable\Nessus Agent" (
-        rd /s /q "C:\ProgramData\Tenable\Nessus Agent" >nul 2>&1
-        echo %DATE% %TIME% [INFO] Removed agent folder >> "%nessusLogs%"
-    )
-    
-    msiexec.exe /i "%nessusInstaller%" NESSUS_GROUPS="%nessusGroups%" NESSUS_SERVER="%nessusServer%" NESSUS_KEY=%nessusKey% /qn /norestart /l*v "%nessusLogs%"
-    
-    if %errorlevel% equ 0 (
-        echo %DATE% %TIME% [OK] Installation successful >> "%nessusLogs%"
-        echo [OK] Nessus Agent installation command executed.
-    ) else (
-        echo %DATE% %TIME% [ERROR] Installation failed with ExitCode: %errorlevel% >> "%nessusLogs%"
-        echo [ERROR] Installation failed with Exit Code: %errorlevel%
-    )
-) else (
-    echo %DATE% %TIME% [ERROR] Installer not found at: %nessusInstaller% >> "%nessusLogs%"
-    echo [ERROR] Installer file not found at: %nessusInstaller%
-)
-
-pause
+taskkill /F /IM nessus-agent-module.exe /T
+taskkill /F /IM nessusd.exe /T
+sc stop "Nessus Agent"
