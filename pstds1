@@ -1,11 +1,30 @@
-$p64 = "HKLM:\SOFTWARE\Microsoft\Internet Explorer\Main\FeatureControl\FEATURE_ENABLE_PRINT_INFO_DISCLOSURE_FIX"
-$p86 = "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Internet Explorer\Main\FeatureControl\FEATURE_ENABLE_PRINT_INFO_DISCLOSURE_FIX"
-$n   = "iexplore.exe"
+@echo off
+setlocal
 
-$v64 = if (Test-Path $p64) { (Get-ItemProperty $p64 -Name $n -EA 0).$n } else { "Missing" }
-$v86 = if (Test-Path $p86) { (Get-ItemProperty $p86 -Name $n -EA 0).$n } else { "Missing" }
+set "installPath=C:\temp\rev1"
+set "nessusInstaller=%installPath%\Nessus\NessusAgent.msi"
+set "nessusLogs=C:\Windows\Temp\Nessus_Agent_1062_Install.log"
+set "nessusGroups=Windows"
+set "nessusServer=1XXXXXX"
+set "nessusKey=XXX"
 
-if ($null -eq $v64) { $v64 = "NotFound" }
-if ($null -eq $v86) { $v86 = "NotFound" }
+if exist "%nessusInstaller%" (
+    reg delete "HKEY_LOCAL_MACHINE\SOFTWARE\Tenable\TAG" /f >nul 2>&1
+    rd /s /q "C:\ProgramData\Tenable\Nessus Agent" >nul 2>&1
+    
+    msiexec.exe /i "%nessusInstaller%" ^
+    NESSUS_GROUPS="%nessusGroups%" ^
+    NESSUS_SERVER="%nessusServer%" ^
+    NESSUS_KEY=%nessusKey% ^
+    /qn /norestart /l*v "%nessusLogs%"
 
-Write-Host "x64: $v64 | x32: $v86"
+    if %errorlevel% equ 0 (
+        echo [OK] Nessus Agent installation command executed.
+    ) else (
+        echo [ERROR] Installation failed with Exit Code: %errorlevel%
+    )
+) else (
+    echo [ERROR] Installer file not found at: %nessusInstaller%
+)
+
+pause
