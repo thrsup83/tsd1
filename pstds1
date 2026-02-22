@@ -1,1 +1,17 @@
-msiexec /a "C:\temp\rev1\Nessus\NessusAgent.msi" /qb TARGETDIR="C:\Nessus_Extraido"
+:: Cria as pastas de destino
+mkdir "C:\Program Files\Tenable\Nessus Agent"
+mkdir "C:\ProgramData\Tenable\Nessus Agent"
+
+:: Copia os binários (program files)
+xcopy "C:\Nessus_Manual\program files\Tenable\Nessus Agent\*.*" "C:\Program Files\Tenable\Nessus Agent\" /E /I /H /Y
+
+:: Copia os arquivos de dados (CommonAppData)
+xcopy "C:\Nessus_Manual\CommonAppData\Tenable\Nessus Agent\*.*" "C:\ProgramData\Tenable\Nessus Agent\" /E /I /H /Y
+
+
+sc create "Nessus Agent" binPath= "C:\Program Files\Tenable\Nessus Agent\nessus-agent-module.exe" start= auto displayname= "Nessus Agent"
+
+sc description "Nessus Agent" "Tenable Nessus Agent"
+
+
+net start "Nessus Agent"
