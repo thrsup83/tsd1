@@ -1,14 +1,38 @@
-$Path1 = "HKLM:\Software\Microsoft\Cryptography\Wintrust\Config"
-$Path2 = "HKLM:\Software\Wow6432Node\Microsoft\Cryptography\Wintrust\Config"
+# Configuration
+$TargetServer = "XXXXXXXX"
+$FilePath     = "D:\tst\tst1.txt"
+$BackupDir    = "C:\temp\chgs\$($TargetServer)_bkp"
+$Timestamp    = Get-Date -Format "yyyyMMdd_HHmm"
+$OutputFile   = "ACL_File_Bkp_$Timestamp.txt"
 
-if (-not (Test-Path $Path1)) {
-    New-Item -Path $Path1 -Force
-}
-New-ItemProperty -Path $Path1 -Name "EnableCertPaddingCheck" -Value "1" -PropertyType "String" -Force
+$ScriptBlock = {
+    param($FilePath, $BackupDir, $OutputFile)
 
-if ([Environment]::Is64BitOperatingSystem) {
-    if (-not (Test-Path $Path2)) {
-        New-Item -Path $Path2 -Force
+    try {
+        # Create bkp folder
+        if (-not (Test-Path $BackupDir)) {
+            New-Item -Path $BackupDir -ItemType Directory -Force | Out-Null
+        }
+
+        # Split path to handle the file specifically
+        $Parent = Split-Path $FilePath
+        $FileName = Split-Path $FilePath -Leaf
+        $TargetBkp = Join-Path $BackupDir $OutputFile
+
+        # Run icacls on the file only
+        Push-Location $Parent
+        & icacls $FileName /save $TargetBkp
+        Pop-Location
+
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host "Success: Backup for $FileName created at $TargetBkp" -ForegroundColor Green
+        }
     }
-    New-ItemProperty -Path $Path2 -Name "EnableCertPaddingCheck" -Value "1" -PropertyType "String" -Force
+    catch {
+        Write-Error "Error: $($_.Exception.Message)"
+    }
 }
+
+# Remote execution
+Write-Host "Starting backup on $TargetServer..." -ForegroundColor Yellow
+Invoke-Command -ComputerName $TargetServer -ScriptBlock $ScriptBlock -ArgumentList $FilePath, $BackupDir, $OutputFile
