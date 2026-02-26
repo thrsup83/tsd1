@@ -1,22 +1,70 @@
-$targetServer = "XXX"
-$remotePath   = "D:\tst\tst1.txt"
+# Interactive VIT Remediation Tool
 
-$session = New-PSSession -ComputerName $targetServer
+# 1. Inputs
+$targetServer = Read-Host "Enter Target Server Name"
+$remoteFile   = Read-Host "Enter Full File Path (e.g., D:\path\file.exe)"
 
-Invoke-Command -Session $session -ScriptBlock {
-    param($path)
+# Local Setup
+$localBkpDir = "C:\temp\chgs\$($targetServer)_bkp"
+$timestamp   = Get-Date -Format "yyyyMMdd_HHmm"
+$fileName    = Split-Path $remoteFile -Leaf
+$bkpName     = "$($fileName)_ACL_$timestamp.txt"
 
-    $dir  = Split-Path $path
-    $file = Split-Path $path -Leaf
+if (-not (Test-Path $localBkpDir)) { New-Item $localBkpDir -ItemType Directory | Out-Null }
 
-    Set-Location $dir
+# 2. Start Session & Backup
+$s = New-PSSession -ComputerName $targetServer
+Write-Host "`n[1/3] Backing up permissions..." -ForegroundColor Cyan
 
-    # Disable inheritance and convert to explicit
-    icacls $file /inheritance:d
+Invoke-Command -Session $s -ScriptBlock {
+    param($remoteFile, $bkpName)
+    $parent = Split-Path $remoteFile
+    $leaf   = Split-Path $remoteFile -Leaf
+    Push-Location $parent
+    & icacls $leaf /save "C:\Windows\Temp\$bkpName"
+    Pop-Location
+} -ArgumentList $remoteFile, $bkpName
 
-    # Grant Read & Execute (RX) using SID to avoid naming issues
-    icacls $file /grant:r "*S-1-5-11:RX"
+Copy-Item -FromSession $s -Path "C:\Windows\Temp\$bkpName" -Destination $localBkpDir -Force
+Invoke-Command -Session $s { param($bkpName) Remove-Item "C:\Windows\Temp\$bkpName" -Force } -ArgumentList $bkpName
 
-} -ArgumentList $remotePath
+Write-Host "Backup completed: $localBkpDir\$bkpName" -ForegroundColor Green
 
-Remove-PSSession $session
+# 3. Apply Fix
+$confirm = Read-Host "`nDo you want to remove Modify/Write perms and set Read/Execute (RX) for Authenticated Users? (y/n)"
+if ($confirm -eq 'y') {
+    Write-Host "[2/3] Applying RX permissions..." -ForegroundColor Cyan
+    Invoke-Command -Session $s -ScriptBlock {
+        param($remoteFile)
+        $parent = Split-Path $remoteFile
+        $leaf   = Split-Path $remoteFile -Leaf
+        cd $parent
+        icacls $leaf /inheritance:d
+        icacls $leaf /grant:r "*S-1-5-11:RX"
+    } -ArgumentList $remoteFile
+    Write-Host "Permissions updated successfully." -ForegroundColor Green
+}
+
+# 4. Final Action (Finish or Rollback)
+$final = Read-Host "`nWorkflow complete. Do you want to (e)xit or (r)evert changes?"
+if ($final -eq 'r') {
+    $bkpToRestore = Read-Host "Enter the full path of the backup file to use"
+    Write-Host "[3/3] Reverting changes..." -ForegroundColor Yellow
+    
+    $tempFile = Split-Path $bkpToRestore -Leaf
+    Copy-Item -Path $bkpToRestore -Destination "C:\Windows\Temp\$tempFile" -ToSession $s
+    
+    Invoke-Command -Session $s -ScriptBlock {
+        param($remoteFile, $tempFile)
+        $parent = Split-Path $remoteFile
+        Push-Location $parent
+        & icacls . /restore "C:\Windows\Temp\$tempFile"
+        Pop-Location
+        Remove-Item "C:\Windows\Temp\$tempFile" -Force
+    } -ArgumentList $remoteFile, $tempFile
+    Write-Host "Rollback completed successfully." -ForegroundColor Green
+}
+
+# Cleanup
+Remove-PSSession $s
+Write-Host "`nSession closed. Goodbye!" -ForegroundColor Cyan
