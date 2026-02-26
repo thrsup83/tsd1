@@ -1,42 +1,34 @@
 # Configuration
 $TargetServer = "XXX"
 $RemoteFile   = "D:\tst\tst1.txt"
-$LocalBkpDir  = "C:\temp\chgs\$($TargetServer)_bkp"
+$LocalBkpPath = "C:\temp\chgs\XXX_bkp\ARQUIVO_AQUI.txt"
 
-# Generate file-specific name with timestamp
-$FileName     = Split-Path $RemoteFile -Leaf
-$Timestamp    = Get-Date -Format "yyyyMMdd_HHmm"
-$BkpFileName  = "$($FileName)_ACL_$Timestamp.txt"
-
-# 1. Create local backup folder
-if (-not (Test-Path $LocalBkpDir)) {
-    New-Item -Path $LocalBkpDir -ItemType Directory -Force | Out-Null
-}
-
-# 2. Start session
+# 1. Open session
 $Session = New-PSSession -ComputerName $TargetServer
 
-# 3. Run icacls remotely
+# 2. Upload local backup to remote temp
+$TempName = Split-Path $LocalBkpPath -Leaf
+Copy-Item -Path $LocalBkpPath -Destination "C:\Windows\Temp\$TempName" -ToSession $Session
+
+# 3. Restore permissions
 Invoke-Command -Session $Session -ScriptBlock {
-    param($RemoteFile, $BkpFileName)
+    param($RemoteFile, $TempName)
     
-    $Parent = Split-Path $RemoteFile
-    $Leaf   = Split-Path $RemoteFile -Leaf
+    $ParentDir = Split-Path $RemoteFile
+    $BkpPath   = "C:\Windows\Temp\$TempName"
     
-    Push-Location $Parent
-    & icacls $Leaf /save "C:\Windows\Temp\$( $BkpFileName )"
+    # Restore must run from the parent folder
+    Push-Location $ParentDir
+    & icacls . /restore $BkpPath
     Pop-Location
-} -ArgumentList $RemoteFile, $BkpFileName
+} -ArgumentList $RemoteFile, $TempName
 
-# 4. Pull file to local machine
-Copy-Item -FromSession $Session -Path "C:\Windows\Temp\$BkpFileName" -Destination $LocalBkpDir -Force
-
-# 5. Remote cleanup and close session
+# 4. Remote cleanup and close session
 Invoke-Command -Session $Session -ScriptBlock { 
-    param($BkpFileName)
-    Remove-Item -Path "C:\Windows\Temp\$BkpFileName" -Force 
-} -ArgumentList $BkpFileName
+    param($TempName)
+    Remove-Item -Path "C:\Windows\Temp\$TempName" -Force 
+} -ArgumentList $TempName
 
 Remove-PSSession $Session
 
-Write-Host "Success: Backup for $FileName saved to $LocalBkpDir" -ForegroundColor Green
+Write-Host "Success: Permissions restored on $TargetServer" -ForegroundColor Green
