@@ -1,30 +1,28 @@
-# Configuration
-$TargetServer = "XXX"
-$RemoteFile   = "D:\tst\tst1.txt"
+# change these
+$server = "XXX"
+$file = "D:\tst\tst1.txt"
 
-# 1. Open session
-$Session = New-PSSession -ComputerName $TargetServer
+# start session
+$s = New-PSSession -ComputerName $server
 
-# 2. Set Read-Only permissions for Authenticated Users
-Invoke-Command -Session $Session -ScriptBlock {
-    param($RemoteFile)
+Invoke-Command -Session $s -ScriptBlock {
+    param($file)
     
-    $Parent = Split-Path $RemoteFile
-    $FileName = Split-Path $RemoteFile -Leaf
+    $path = Split-Path $file
+    $name = Split-Path $file -Leaf
     
-    Push-Location $Parent
+    # move to folder
+    cd $path
     
-    # Disable inheritance and copy current permissions
-    & icacls $FileName /inheritance:d
+    # break inheritance and keep perms
+    icacls $name /inheritance:d
     
-    # Grant only Read and Execute (RX) to Authenticated Users
-    # :r replaces any existing permissions for this specific group
-    & icacls $FileName /grant:r "Authenticated Users":RX
+    # set RX only for auth users
+    icacls $name /grant:r "Authenticated Users":RX
     
-    Pop-Location
-} -ArgumentList $RemoteFile
+} -ArgumentList $file
 
-# 3. Close session
-Remove-PSSession $Session
+# cleanup
+Remove-PSSession $s
 
-Write-Host "Success: Permissions set to Read-Only (RX) for $RemoteFile" -ForegroundColor Green
+Write-Host "Done: $file updated on $server" -ForegroundColor Green
