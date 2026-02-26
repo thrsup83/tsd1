@@ -1,34 +1,30 @@
 # Configuration
 $TargetServer = "XXX"
 $RemoteFile   = "D:\tst\tst1.txt"
-$LocalBkpPath = "C:\temp\chgs\XXX_bkp\ARQUIVO_AQUI.txt"
 
 # 1. Open session
 $Session = New-PSSession -ComputerName $TargetServer
 
-# 2. Upload local backup to remote temp
-$TempName = Split-Path $LocalBkpPath -Leaf
-Copy-Item -Path $LocalBkpPath -Destination "C:\Windows\Temp\$TempName" -ToSession $Session
-
-# 3. Restore permissions
+# 2. Set Read-Only permissions for Authenticated Users
 Invoke-Command -Session $Session -ScriptBlock {
-    param($RemoteFile, $TempName)
+    param($RemoteFile)
     
-    $ParentDir = Split-Path $RemoteFile
-    $BkpPath   = "C:\Windows\Temp\$TempName"
+    $Parent = Split-Path $RemoteFile
+    $FileName = Split-Path $RemoteFile -Leaf
     
-    # Restore must run from the parent folder
-    Push-Location $ParentDir
-    & icacls . /restore $BkpPath
+    Push-Location $Parent
+    
+    # Disable inheritance and copy current permissions
+    & icacls $FileName /inheritance:d
+    
+    # Grant only Read and Execute (RX) to Authenticated Users
+    # :r replaces any existing permissions for this specific group
+    & icacls $FileName /grant:r "Authenticated Users":RX
+    
     Pop-Location
-} -ArgumentList $RemoteFile, $TempName
+} -ArgumentList $RemoteFile
 
-# 4. Remote cleanup and close session
-Invoke-Command -Session $Session -ScriptBlock { 
-    param($TempName)
-    Remove-Item -Path "C:\Windows\Temp\$TempName" -Force 
-} -ArgumentList $TempName
-
+# 3. Close session
 Remove-PSSession $Session
 
-Write-Host "Success: Permissions restored on $TargetServer" -ForegroundColor Green
+Write-Host "Success: Permissions set to Read-Only (RX) for $RemoteFile" -ForegroundColor Green
