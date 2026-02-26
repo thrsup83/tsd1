@@ -1,28 +1,22 @@
-# change these
-$server = "XXX"
-$file = "D:\tst\tst1.txt"
+$targetServer = "XXX"
+$remotePath   = "D:\tst\tst1.txt"
 
-# start session
-$s = New-PSSession -ComputerName $server
+$session = New-PSSession -ComputerName $targetServer
 
-Invoke-Command -Session $s -ScriptBlock {
-    param($file)
-    
-    $path = Split-Path $file
-    $name = Split-Path $file -Leaf
-    
-    # move to folder
-    cd $path
-    
-    # break inheritance and keep perms
-    icacls $name /inheritance:d
-    
-    # set RX only for auth users
-    icacls $name /grant:r "Authenticated Users":RX
-    
-} -ArgumentList $file
+Invoke-Command -Session $session -ScriptBlock {
+    param($path)
 
-# cleanup
-Remove-PSSession $s
+    $dir  = Split-Path $path
+    $file = Split-Path $path -Leaf
 
-Write-Host "Done: $file updated on $server" -ForegroundColor Green
+    Set-Location $dir
+
+    # Disable inheritance and convert to explicit
+    icacls $file /inheritance:d
+
+    # Grant Read & Execute (RX) using SID to avoid naming issues
+    icacls $file /grant:r "*S-1-5-11:RX"
+
+} -ArgumentList $remotePath
+
+Remove-PSSession $session
