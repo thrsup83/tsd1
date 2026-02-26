@@ -1,1 +1,14 @@
-We have successfully updated several servers; however, some are experiencing PowerShell module errors that are causing the installer to hang. We have opened a new Change Request (CR) specifically to troubleshoot the PowerShell module on those affected servers
+$Path1 = "HKLM:\Software\Microsoft\Cryptography\Wintrust\Config"
+$Path2 = "HKLM:\Software\Wow6432Node\Microsoft\Cryptography\Wintrust\Config"
+
+if (-not (Test-Path $Path1)) {
+    New-Item -Path $Path1 -Force
+}
+New-ItemProperty -Path $Path1 -Name "EnableCertPaddingCheck" -Value "1" -PropertyType "String" -Force
+
+if ([Environment]::Is64BitOperatingSystem) {
+    if (-not (Test-Path $Path2)) {
+        New-Item -Path $Path2 -Force
+    }
+    New-ItemProperty -Path $Path2 -Name "EnableCertPaddingCheck" -Value "1" -PropertyType "String" -Force
+}
