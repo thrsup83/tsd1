@@ -1,35 +1,42 @@
 # Configuration
-$TargetServer = "XXXXXXXX"
+$TargetServer = "XXX"
 $RemoteFile   = "D:\tst\tst1.txt"
 $LocalBkpDir  = "C:\temp\chgs\$($TargetServer)_bkp"
+
+# Generate file-specific name with timestamp
+$FileName     = Split-Path $RemoteFile -Leaf
 $Timestamp    = Get-Date -Format "yyyyMMdd_HHmm"
-$BkpFileName  = "ACL_File_Bkp_$Timestamp.txt"
+$BkpFileName  = "$($FileName)_ACL_$Timestamp.txt"
 
 # 1. Create local backup folder
 if (-not (Test-Path $LocalBkpDir)) {
     New-Item -Path $LocalBkpDir -ItemType Directory -Force | Out-Null
 }
 
-# 2. Start session and run icacls
+# 2. Start session
 $Session = New-PSSession -ComputerName $TargetServer
 
+# 3. Run icacls remotely
 Invoke-Command -Session $Session -ScriptBlock {
     param($RemoteFile, $BkpFileName)
     
     $Parent = Split-Path $RemoteFile
     $Leaf   = Split-Path $RemoteFile -Leaf
     
-    # Save to remote temp folder first
     Push-Location $Parent
-    & icacls $Leaf /save "C:\Windows\Temp\$BkpFileName"
+    & icacls $Leaf /save "C:\Windows\Temp\$( $BkpFileName )"
     Pop-Location
 } -ArgumentList $RemoteFile, $BkpFileName
 
-# 3. Copy file from remote session to local machine
+# 4. Pull file to local machine
 Copy-Item -FromSession $Session -Path "C:\Windows\Temp\$BkpFileName" -Destination $LocalBkpDir -Force
 
-# 4. Cleanup remote temp file and close session
-Remove-Item -Session $Session -Path "C:\Windows\Temp\$BkpFileName" -Force
+# 5. Remote cleanup and close session
+Invoke-Command -Session $Session -ScriptBlock { 
+    param($BkpFileName)
+    Remove-Item -Path "C:\Windows\Temp\$BkpFileName" -Force 
+} -ArgumentList $BkpFileName
+
 Remove-PSSession $Session
 
-Write-Host "Success: Backup transferred to local path: $LocalBkpDir\$BkpFileName" -ForegroundColor Green
+Write-Host "Success: Backup for $FileName saved to $LocalBkpDir" -ForegroundColor Green
