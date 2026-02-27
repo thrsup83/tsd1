@@ -3,34 +3,51 @@ param(
     [string]$FilePath
 )
 
-# 1. Setup local backup environment
-$TargetFolder = "C:\temp\chgs\SCCM_Remediation_Bkp"
-$Timestamp = Get-Date -Format "yyyyMMdd_HHmm"
-$FileName = Split-Path $FilePath -Leaf
-$BkpFile = "$($FileName)_ACL_$Timestamp.txt"
 
-if (-not (Test-Path $TargetFolder)) {
-    New-Item -Path $TargetFolder -ItemType Directory -Force | Out-Null
+$Server      = $env:COMPUTERNAME
+$Timestamp   = Get-Date -Format "yyyyMMdd_HHmm"
+$FileName    = Split-Path $FilePath -Leaf
+
+$BaseDir     = "C:\temp\chgs"
+$BkpDir      = "$BaseDir\$($Server)_bkp"
+$ResolvedDir = "$BaseDir\$($Server)_resolved"
+$SuccessLog  = "$BaseDir\SCCM_Remediation_Success.log"
+
+
+foreach ($Dir in ($BkpDir, $ResolvedDir)) {
+    if (-not (Test-Path $Dir)) { New-Item -Path $Dir -ItemType Directory -Force | Out-Null }
 }
 
 try {
     if (Test-Path $FilePath) {
-        # 2. Backup current permissions locally
-        $ParentDir = Split-Path $FilePath
-        Push-Location $ParentDir
-        & icacls $FileName /save "$TargetFolder\$BkpFile"
+        $Parent = Split-Path $FilePath
+        $BkpFile = "$($FileName)_ACL_PRE_$Timestamp.txt"
+        $ResFile = "$($FileName)_ACL_POST_$Timestamp.txt"
+
+       
+        Push-Location $Parent
+        & icacls $FileName /save "$BkpDir\$BkpFile"
         Pop-Location
 
-        # 3. Apply Fix: Disable inheritance and set RX for Authenticated Users
-        # Using SID *S-1-5-11 to avoid language/naming issues
+       
         & icacls $FilePath /inheritance:d
         & icacls $FilePath /grant:r "*S-1-5-11:RX"
 
-        Write-Output "SUCCESS: Backup created at $TargetFolder\$BkpFile and permissions updated for $FilePath"
-    } else {
+        
+        Push-Location $Parent
+        & icacls $FileName /save "$ResolvedDir\$ResFile"
+        Pop-Location
+
+        
+        $LogEntry = "$(Get-Date -Format "yyyy-MM-dd HH:mm:ss") | $Server | $FilePath | Status: REMEDIATED | Proof: $ResFile"
+        $LogEntry | Out-File -FilePath $SuccessLog -Append
+
+        Write-Output "SUCCESS: Remediation complete for $FilePath. Evidence stored in $ResolvedDir"
+    }
+    else {
         Write-Error "File not found: $FilePath"
     }
 }
 catch {
-    Write-Error "An error occurred: $($_.Exception.Message)"
+    Write-Error "Critical Error on $Server : $($_.Exception.Message)"
 }
