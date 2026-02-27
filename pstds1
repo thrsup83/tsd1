@@ -3,51 +3,84 @@ param(
     [string]$FilePath
 )
 
-
+# --- Environment Setup ---
 $Server      = $env:COMPUTERNAME
 $Timestamp   = Get-Date -Format "yyyyMMdd_HHmm"
 $FileName    = Split-Path $FilePath -Leaf
-
 $BaseDir     = "C:\temp\chgs"
 $BkpDir      = "$BaseDir\$($Server)_bkp"
 $ResolvedDir = "$BaseDir\$($Server)_resolved"
-$SuccessLog  = "$BaseDir\SCCM_Remediation_Success.log"
-
+$AuditLog    = "$ResolvedDir\$($FileName)_Audit_$Timestamp.log"
 
 foreach ($Dir in ($BkpDir, $ResolvedDir)) {
     if (-not (Test-Path $Dir)) { New-Item -Path $Dir -ItemType Directory -Force | Out-Null }
 }
 
+Write-Output "--------------------------------------------------"
+Write-Output "STARTING VIT REMEDIATION: $FilePath"
+Write-Output "TARGET SERVER: $Server"
+Write-Output "--------------------------------------------------"
+
 try {
     if (Test-Path $FilePath) {
         $Parent = Split-Path $FilePath
         $BkpFile = "$($FileName)_ACL_PRE_$Timestamp.txt"
-        $ResFile = "$($FileName)_ACL_POST_$Timestamp.txt"
-
-       
-        Push-Location $Parent
-        & icacls $FileName /save "$BkpDir\$BkpFile"
-        Pop-Location
-
-       
-        & icacls $FilePath /inheritance:d
-        & icacls $FilePath /grant:r "*S-1-5-11:RX"
-
         
-        Push-Location $Parent
-        & icacls $FileName /save "$ResolvedDir\$ResFile"
-        Pop-Location
-
+        # 1. INITIAL AUDIT
+        Write-Output "[STEP 1/4] Analyzing current permissions..."
+        $ACL = Get-Acl $FilePath
+        $hasEveryone = $ACL.Access | Where-Object { $_.IdentityReference -match "Everyone" }
+        $currentAuthUsers = $ACL.Access | Where-Object { $_.IdentityReference -match "Authenticated Users" -or $_.IdentityReference -eq "S-1-5-11" }
         
-        $LogEntry = "$(Get-Date -Format "yyyy-MM-dd HH:mm:ss") | $Server | $FilePath | Status: REMEDIATED | Proof: $ResFile"
-        $LogEntry | Out-File -FilePath $SuccessLog -Append
+        $AuditHeader = @"
+==================================================
+REMEDIATION AUDIT REPORT
+File: $FilePath
+Date: $(Get-Date)
+==================================================
+PRE-CHECK ANALYSIS:
+- Everyone Group Found: $(if($hasEveryone){"YES (RISK)"}else{"NO"})
+- Authenticated Users Rights: $($currentAuthUsers.FileSystemRights -join ", ")
+"@
+        $AuditHeader | Out-File $AuditLog
 
-        Write-Output "SUCCESS: Remediation complete for $FilePath. Evidence stored in $ResolvedDir"
+        # 2. PRE-FIX BACKUP
+        Write-Output "[STEP 2/4] Generating security backup..."
+        Push-Location $Parent
+        & icacls $FileName /save "$BkpDir\$BkpFile" | Out-Null
+        Pop-Location
+        "BACKUP CREATED: $BkpDir\$BkpFile" | Out-File $AuditLog -Append
+
+        # 3. APPLY REMEDIATION
+        Write-Output "[STEP 3/4] Disabling inheritance and locking permissions..."
+        & icacls $FilePath /inheritance:d | Out-File $AuditLog -Append
+        
+        Write-Output "[STEP 4/4] Setting RX-only for Authenticated Users (SID: S-1-5-11)..."
+        & icacls $FilePath /grant:r "*S-1-5-11:RX" | Out-File $AuditLog -Append
+
+        # 4. FINAL VALIDATION
+        $FinalACL = Get-Acl $FilePath
+        $FinalAuthUsers = $FinalACL.Access | Where-Object { $_.IdentityReference -match "Authenticated Users" -or $_.IdentityReference -eq "S-1-5-11" }
+        
+        $FinalStatus = @"
+`nPOST-FIX VALIDATION:
+- Inheritance: Disabled (Explicit)
+- Authenticated Users New Rights: $($FinalAuthUsers.FileSystemRights -join ", ")
+- Status: SUCCESSFULY REMEDIATED
+==================================================
+"@
+        $FinalStatus | Out-File $AuditLog -Append
+
+        Write-Output "--------------------------------------------------"
+        Write-Output "REMEDIATION SUCCESSFUL"
+        Write-Output "New Rights: $($FinalAuthUsers.FileSystemRights)"
+        Write-Output "Audit Log: $AuditLog"
+        Write-Output "--------------------------------------------------"
     }
     else {
-        Write-Error "File not found: $FilePath"
+        Write-Error "CRITICAL: File not found at $FilePath"
     }
 }
 catch {
-    Write-Error "Critical Error on $Server : $($_.Exception.Message)"
+    Write-Error "EXCEPTION on $Server : $($_.Exception.Message)"
 }
