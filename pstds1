@@ -1,36 +1,36 @@
-# Interactive VIT Remediation Tool
 
-# 1. Inputs
 $targetServer = Read-Host "Enter Target Server Name"
-$remoteFile   = Read-Host "Enter Full File Path (e.g., D:\path\file.exe)"
+$remoteFile   = Read-Host "Enter Full File Path (e.g., D:\tst\tst1.txt)"
 
-# Local Setup
-$localBkpDir = "C:\temp\chgs\$($targetServer)_bkp"
-$timestamp   = Get-Date -Format "yyyyMMdd_HHmm"
-$fileName    = Split-Path $remoteFile -Leaf
-$bkpName     = "$($fileName)_ACL_$timestamp.txt"
+
+$localBkpDir  = "C:\temp\chgs\$($targetServer)_bkp"
+$timestamp    = Get-Date -Format "yyyyMMdd_HHmm"
+$fileName     = Split-Path $remoteFile -Leaf
+$bkpFileName  = "$($fileName)_ACL_$timestamp.txt"
 
 if (-not (Test-Path $localBkpDir)) { New-Item $localBkpDir -ItemType Directory | Out-Null }
 
-# 2. Start Session & Backup
+
 $s = New-PSSession -ComputerName $targetServer
 Write-Host "`n[1/3] Backing up permissions..." -ForegroundColor Cyan
 
 Invoke-Command -Session $s -ScriptBlock {
-    param($remoteFile, $bkpName)
+    param($remoteFile, $bkpFileName)
     $parent = Split-Path $remoteFile
     $leaf   = Split-Path $remoteFile -Leaf
     Push-Location $parent
-    & icacls $leaf /save "C:\Windows\Temp\$bkpName"
+    & icacls $leaf /save "C:\Windows\Temp\$bkpFileName"
     Pop-Location
-} -ArgumentList $remoteFile, $bkpName
+} -ArgumentList $remoteFile, $bkpFileName
 
-Copy-Item -FromSession $s -Path "C:\Windows\Temp\$bkpName" -Destination $localBkpDir -Force
-Invoke-Command -Session $s { param($bkpName) Remove-Item "C:\Windows\Temp\$bkpName" -Force } -ArgumentList $bkpName
 
-Write-Host "Backup completed: $localBkpDir\$bkpName" -ForegroundColor Green
+Copy-Item -FromSession $s -Path "C:\Windows\Temp\$bkpFileName" -Destination $localBkpDir -Force
 
-# 3. Apply Fix
+
+Invoke-Command -Session $s -ScriptBlock { param($bkpFileName) Remove-Item "C:\Windows\Temp\$bkpFileName" -Force } -ArgumentList $bkpFileName
+
+Write-Host "Backup completed and saved to: $localBkpDir\$bkpFileName" -ForegroundColor Green
+
 $confirm = Read-Host "`nDo you want to remove Modify/Write perms and set Read/Execute (RX) for Authenticated Users? (y/n)"
 if ($confirm -eq 'y') {
     Write-Host "[2/3] Applying RX permissions..." -ForegroundColor Cyan
@@ -39,32 +39,34 @@ if ($confirm -eq 'y') {
         $parent = Split-Path $remoteFile
         $leaf   = Split-Path $remoteFile -Leaf
         cd $parent
+        # Break inheritance and keep perms
         icacls $leaf /inheritance:d
+        # Set RX only for Authenticated Users (using SID)
         icacls $leaf /grant:r "*S-1-5-11:RX"
     } -ArgumentList $remoteFile
     Write-Host "Permissions updated successfully." -ForegroundColor Green
 }
 
-# 4. Final Action (Finish or Rollback)
-$final = Read-Host "`nWorkflow complete. Do you want to (e)xit or (r)evert changes?"
-if ($final -eq 'r') {
+
+$finalAction = Read-Host "`nWork complete. Do you want to (e)xit or (r)evert changes?"
+if ($finalAction -eq 'r') {
     $bkpToRestore = Read-Host "Enter the full path of the backup file to use"
     Write-Host "[3/3] Reverting changes..." -ForegroundColor Yellow
     
-    $tempFile = Split-Path $bkpToRestore -Leaf
-    Copy-Item -Path $bkpToRestore -Destination "C:\Windows\Temp\$tempFile" -ToSession $s
+    $tempName = Split-Path $bkpToRestore -Leaf
+    Copy-Item -Path $bkpToRestore -Destination "C:\Windows\Temp\$tempName" -ToSession $s
     
     Invoke-Command -Session $s -ScriptBlock {
-        param($remoteFile, $tempFile)
+        param($remoteFile, $tempName)
         $parent = Split-Path $remoteFile
         Push-Location $parent
-        & icacls . /restore "C:\Windows\Temp\$tempFile"
+        & icacls . /restore "C:\Windows\Temp\$tempName"
         Pop-Location
-        Remove-Item "C:\Windows\Temp\$tempFile" -Force
-    } -ArgumentList $remoteFile, $tempFile
+        Remove-Item "C:\Windows\Temp\$tempName" -Force
+    } -ArgumentList $remoteFile, $tempName
     Write-Host "Rollback completed successfully." -ForegroundColor Green
 }
 
-# Cleanup
+# --- Cleanup ---
 Remove-PSSession $s
 Write-Host "`nSession closed. Goodbye!" -ForegroundColor Cyan
