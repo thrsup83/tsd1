@@ -1,9 +1,4 @@
 @echo off
-
 if not exist "C:\temp\Oracle_Setup" mkdir "C:\temp\Oracle_Setup"
-
-
-copy /y "%~dp0Oracle12C64bit.rsp" "C:\temp\Oracle_Setup\"
-
-
-"%~dp0setup.exe" -silent -nowait -responseFile "C:\temp\Oracle_Setup\Oracle12C64bit.rsp"
+xcopy "%~dp0*.*" "C:\temp\Oracle_Setup\" /s /e /i /y
+start /wait "" "C:\temp\Oracle_Setup\setup.exe" -silent -responseFile "C:\temp\Oracle_Setup\Oracle12C64bit.rsp"
