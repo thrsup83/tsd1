@@ -1,1 +1,1 @@
-cscript C:\Windows\System32\slmgr.vbs /dlv abe28aea-62d0-4053-902e-a7457d19da3c
+cscript C:\Windows\System32\slmgr.vbs /dlv all | findstr /i "Name Description License"
