@@ -1,2 +1,2 @@
 $ospp = (Get-ChildItem -Path "C:\Program Files\Microsoft Office\Office16", "C:\Program Files (x86)\Microsoft Office\Office16" -Filter "ospp.vbs" -ErrorAction SilentlyContinue).FullName
-if ($ospp) { cscript $ospp /dstatus } else { Write-Host "Script ospp.vbs não localizado nos caminhos padrão." }
+cscript $ospp /act
