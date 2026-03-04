@@ -1,14 +1,16 @@
-$regPath = "HKLM:\SOFTWARE\YYYYYLabs\YYYYYAgent"
-$progFiles = "C:\Program Files\YYYYYOne"
+$regPath = "HKLM:\SOFTWARE\YYYYY Labs\YYYYYAgent"
 
 if (Test-Path $regPath) {
-    $version = (Get-ItemProperty -Path $regPath -Name "Version" -ErrorAction SilentlyContinue).Version
+    $item = Get-ItemProperty -Path $regPath -ErrorAction SilentlyContinue
+    $version = $item.Version
     
-    if (Test-Path $progFiles) {
+    if ($version) {
         Write-Output "OK - $version"
     } else {
-        Write-Output "fail - Folder missing"
+        Write-Output "fail - Valor 'Version' nao encontrado na chave"
+        # Lista o que o PS está enxergando na chave para conferir o nome correto:
+        $item | Select-Object * -ExcludeProperty PSPath,PSParentPath,PSChildName,PSDrive,PSProvider
     }
 } else {
-    Write-Output "fail - Registry missing"
+    Write-Output "fail - Caminho do registro nao encontrado"
 }
