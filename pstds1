@@ -1,23 +1,42 @@
 $serverList = Get-Content "z:\THS\SO_1\SO_1_Servers.txt"
 $sourceFile = "z:\THS\SO_1\YYYYYOne.msi"
-$destPath = "temp\SO_Inst1"
+$destDir = "temp\SO_Inst1"
+$searchName = "YYYYY Agent"
 
 foreach ($server in $serverList) {
-    $remoteFolder = "\\$server\C$\$destPath"
-    $remoteFile = Join-Path $remoteFolder "YYYYYOne.msi"
-
     if (Test-Connection -ComputerName $server -Count 1 -Quiet) {
         try {
+            $isInstalled = $false
+            $regBase = [Microsoft.Win32.RegistryKey]::OpenRemoteBaseKey([Microsoft.Win32.RegistryHive]::LocalMachine, $server, [Microsoft.Win32.RegistryView]::Registry64)
+            $regKey = $regBase.OpenSubKey("SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall")
+            
+            foreach ($subKeyName in $regKey.GetSubKeyNames()) {
+                $sub = $regKey.OpenSubKey($subKeyName)
+                $displayName = $sub.GetValue("DisplayName")
+                if ($displayName -like "*$searchName*") {
+                    $isInstalled = $true
+                    break
+                }
+            }
+            $regKey.Close()
+            $regBase.Close()
+
+            if ($isInstalled) {
+                Write-Output "ALREADY INSTALLED: $server"
+                continue
+            }
+
+            $remoteFolder = "\\$server\C$\$destDir"
             if (-not (Test-Path $remoteFolder)) {
                 New-Item -Path $remoteFolder -ItemType Directory -Force | Out-Null
             }
 
             Copy-Item -Path $sourceFile -Destination $remoteFolder -Force -ErrorAction Stop
-
-            if (Test-Path $remoteFile) {
-                Write-Output "SUCCESS: $server"
+            
+            if (Test-Path (Join-Path $remoteFolder "YYYYYOne.msi")) {
+                Write-Output "SUCCESS: $server - File Copied"
             } else {
-                Write-Output "FAILED: $server - Copy Verification"
+                Write-Output "FAILED: $server - Verification Error"
             }
         }
         catch {
