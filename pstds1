@@ -1,23 +1,23 @@
 $serverList = Get-Content "z:\THS\SO_1\SO_1_Servers.txt"
 $sourceFile = "z:\THS\SO_1\YYYYYOne.msi"
-$destDir = "temp\YYYYY_installer"
+$destPath = "temp\SO_Inst1"
 
 foreach ($server in $serverList) {
-    $remotePath = "\\$server\C$\$destDir"
-    $remoteFile = Join-Path $remotePath "YYYYYOne.msi"
-    
+    $remoteFolder = "\\$server\C$\$destPath"
+    $remoteFile = Join-Path $remoteFolder "YYYYYOne.msi"
+
     if (Test-Connection -ComputerName $server -Count 1 -Quiet) {
         try {
-            if (-not (Test-Path $remotePath)) {
-                New-Item -Path $remotePath -ItemType Directory -Force | Out-Null
+            if (-not (Test-Path $remoteFolder)) {
+                New-Item -Path $remoteFolder -ItemType Directory -Force | Out-Null
             }
-            
-            Copy-Item -Path $sourceFile -Destination $remotePath -Force -ErrorAction Stop
-            
+
+            Copy-Item -Path $sourceFile -Destination $remoteFolder -Force -ErrorAction Stop
+
             if (Test-Path $remoteFile) {
                 Write-Output "SUCCESS: $server"
             } else {
-                Write-Output "FAILED: $server - File verification failed"
+                Write-Output "FAILED: $server - Copy Verification"
             }
         }
         catch {
