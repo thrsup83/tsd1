@@ -1,42 +1,31 @@
 $serverList = Get-Content "z:\THS\SO_1\SO_1_Servers.txt"
 $sourceFile = "z:\THS\SO_1\YYYYYOne.msi"
 $destDir = "temp\SO_Inst1"
-$searchName = "YYYYY Agent"
 
 foreach ($server in $serverList) {
     if (Test-Connection -ComputerName $server -Count 1 -Quiet) {
         try {
-            $isInstalled = $false
-            $regBase = [Microsoft.Win32.RegistryKey]::OpenRemoteBaseKey([Microsoft.Win32.RegistryHive]::LocalMachine, $server, [Microsoft.Win32.RegistryView]::Registry64)
-            $regKey = $regBase.OpenSubKey("SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall")
-            
-            foreach ($subKeyName in $regKey.GetSubKeyNames()) {
-                $sub = $regKey.OpenSubKey($subKeyName)
-                $displayName = $sub.GetValue("DisplayName")
-                if ($displayName -like "*$searchName*") {
-                    $isInstalled = $true
-                    break
-                }
-            }
-            $regKey.Close()
-            $regBase.Close()
-
-            if ($isInstalled) {
-                Write-Output "ALREADY INSTALLED: $server"
-                continue
-            }
-
             $remoteFolder = "\\$server\C$\$destDir"
+            $remoteFile = Join-Path $remoteFolder "YYYYYOne.msi"
+
+            # 1. Create directory if missing
             if (-not (Test-Path $remoteFolder)) {
                 New-Item -Path $remoteFolder -ItemType Directory -Force | Out-Null
             }
 
-            Copy-Item -Path $sourceFile -Destination $remoteFolder -Force -ErrorAction Stop
-            
-            if (Test-Path (Join-Path $remoteFolder "YYYYYOne.msi")) {
-                Write-Output "SUCCESS: $server - File Copied"
+            # 2. Check if file already exists
+            if (Test-Path $remoteFile) {
+                Write-Output "SKIP: $server - File already exists"
             } else {
-                Write-Output "FAILED: $server - Verification Error"
+                # 3. Copy file
+                Copy-Item -Path $sourceFile -Destination $remoteFolder -Force -ErrorAction Stop
+                
+                # 4. Final verification
+                if (Test-Path $remoteFile) {
+                    Write-Output "SUCCESS: $server - File copied"
+                } else {
+                    Write-Output "FAILED: $server - Verification failed after copy"
+                }
             }
         }
         catch {
