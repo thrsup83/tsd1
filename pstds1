@@ -1,1 +1,5 @@
-cscript C:\Windows\System32\slmgr.vbs /dlv all | findstr /i "Name Description License"
+$msiPath = 'C:\temp\xxx_installer\xxxx.msi'
+$token = 'XXXXX'
+$allArgs = "/i `"$msiPath`" /q SITE_TOKEN=`"$token`" /norestart"
+
+Start-Process -FilePath "msiexec.exe" -ArgumentList $allArgs -Wait
