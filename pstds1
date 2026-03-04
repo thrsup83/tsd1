@@ -1,5 +1,32 @@
-$msiPath = 'C:\temp\xxx_installer\xxxx.msi'
-$token = 'XXXXX'
-$allArgs = "/i `"$msiPath`" /q SITE_TOKEN=`"$token`" /norestart"
+$msiPath = "C:\temp\YYYYYYYYY_installer\YYYYYYYYY.msi"
+$token = "XXXXX"
 
-Start-Process -FilePath "msiexec.exe" -ArgumentList $allArgs -Wait
+if (-not (Test-Path $msiPath)) {
+    Write-Output "installernotfound"
+    exit 1
+}
+
+$process = Start-Process -FilePath "msiexec.exe" -ArgumentList "/i `"$msiPath`" /qn PROPERTY_NAME=$token /norestart" -Wait -PassThru
+
+$regPath = "HKLM:\SOFTWARE\YYYYYYYYY\YYYYYYYYY"
+$progFiles = "C:\Program Files\YYYYYYYYY"
+
+if (Test-Path $regPath) {
+    $version = (Get-ItemProperty -Path $regPath -Name "Version" -ErrorAction SilentlyContinue).Version
+    $appFolder = Get-ChildItem -Path $progFiles -Filter "YYYYYYYYY*" -Directory | Select-Object -First 1
+    
+    if ($appFolder) {
+        $bin1 = Test-Path (Join-Path $appFolder.FullName "binary1.exe")
+        $bin2 = Test-Path (Join-Path $appFolder.FullName "binary2.exe")
+        
+        if ($bin1 -and $bin2) {
+            Write-Output "OK - $version"
+        } else {
+            Write-Output "fail"
+        }
+    } else {
+        Write-Output "fail"
+    }
+} else {
+    Write-Output "fail"
+}
