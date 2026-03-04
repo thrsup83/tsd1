@@ -1,49 +1,14 @@
-function Get-YYYYYStatus {
-    $regPath = "HKLM:\SOFTWARE\YYYYYLabs\YYYYYAgent"
-    $progFiles = "C:\Program Files\YYYYYOne"
+$regPath = "HKLM:\SOFTWARE\YYYYYLabs\YYYYYAgent"
+$progFiles = "C:\Program Files\YYYYYOne"
+
+if (Test-Path $regPath) {
+    $version = (Get-ItemProperty -Path $regPath -Name "Version" -ErrorAction SilentlyContinue).Version
     
-    if (Test-Path $regPath) {
-        $version = (Get-ItemProperty -Path $regPath -Name "Version" -ErrorAction SilentlyContinue).Version
-        if (Test-Path $progFiles) {
-            return $version
-        }
+    if (Test-Path $progFiles) {
+        Write-Output "OK - $version"
+    } else {
+        Write-Output "fail - Folder missing"
     }
-    return $null
-}
-
-$currentStatus = Get-YYYYYStatus
-if ($currentStatus) {
-    Write-Output "OK - $currentStatus"
-    exit 0
-}
-
-$timestamp = Get-Date -Format "yyyyMMdd_HHmm"
-$installerDir = "C:\temp\YYYYY_installer"
-$msiPath = Join-Path $installerDir "YYYYYOne.msi"
-$logPath = Join-Path $installerDir "YYYYYinstall_$timestamp.log"
-$token = "XXXXX"
-
-if (-not (Test-Path $msiPath)) {
-    Write-Output "installernotfound"
-    exit 1
-}
-
-$args = "/i `"$msiPath`" /qn SITE_TOKEN=$token /norestart /L*V `"$logPath`""
-$process = Start-Process -FilePath "msiexec.exe" -ArgumentList $args -Wait -PassThru
-
-Start-Sleep -Seconds 120
-
-$postInstallStatus = Get-YYYYYStatus
-if ($postInstallStatus) {
-    Write-Output "OK - $postInstallStatus"
-    exit 0
-}
-
-Start-Sleep -Seconds 60
-
-$finalStatus = Get-YYYYYStatus
-if ($finalStatus) {
-    Write-Output "OK - $finalStatus"
 } else {
-    Write-Output "fail"
+    Write-Output "fail - Registry missing"
 }
