@@ -1,49 +1,19 @@
-$searchName = "YYYYY Agent"
-$installerDir = "C:\temp\YYYYY_installer"
-$msiPath = Join-Path $installerDir "YYYYYOne.msi"
-$token = "XXXXX"
+$serverList = Get-Content "z:\THS\SO_1\SO_1_Servers.txt"
+$sourceFile = "z:\THS\SO_1\YYYYYOne.msi"
+$destinationFolder = "temp\YYYYY_installer"
 
-function Get-YYYYYStatus {
-    param($search)
-    $machineKey = [Microsoft.Win32.RegistryKey]::OpenBaseKey([Microsoft.Win32.RegistryHive]::LocalMachine, [Microsoft.Win32.RegistryView]::Registry64)
-    $apps = $machineKey.OpenSubKey("SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall")
-    foreach ($subKeyName in $apps.GetSubKeyNames()) {
-        $subKey = $apps.OpenSubKey($subKeyName)
-        $displayName = $subKey.GetValue("DisplayName")
-        if ($displayName -like "*$search*") {
-            return $subKey.GetValue("DisplayVersion")
+foreach ($server in $serverList) {
+    $targetPath = "\\$server\C$\$destinationFolder"
+    
+    try {
+        if (-not (Test-Path $targetPath)) {
+            New-Item -Path $targetPath -ItemType Directory -Force | Out-Null
         }
+        
+        Copy-Item -Path $sourceFile -Destination $targetPath -Force -ErrorAction Stop
+        Write-Output "SUCCESS: $server"
     }
-    return $null
-}
-
-$status = Get-YYYYYStatus -search $searchName
-if ($status) {
-    Write-Output "OK - $status"
-    exit 0
-}
-
-if (-not (Test-Path $msiPath)) {
-    Write-Output "installernotfound"
-    exit 1
-}
-
-$timestamp = Get-Date -Format "yyyyMMdd_HHmm"
-$logPath = Join-Path $installerDir "YYYYYinstall_$timestamp.log"
-$args = "/i `"$msiPath`" /qn SITE_TOKEN=$token /norestart /L*V `"$logPath`""
-Start-Process -FilePath "msiexec.exe" -ArgumentList $args -Wait
-
-Start-Sleep -Seconds 120
-$status = Get-YYYYYStatus -search $searchName
-if ($status) {
-    Write-Output "OK - $status"
-    exit 0
-}
-
-Start-Sleep -Seconds 60
-$status = Get-YYYYYStatus -search $searchName
-if ($status) {
-    Write-Output "OK - $status"
-} else {
-    Write-Output "fail"
+    catch {
+        Write-Output "ERROR: $server - $($_.Exception.Message)"
+    }
 }
