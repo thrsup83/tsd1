@@ -1,14 +1,14 @@
 function Get-YYYYYStatus {
-    $regPath = "HKLM:\SOFTWARE\YYYYYYYYY\YYYYYYYYY"
-    $progFiles = "C:\Program Files\YYYYYYYYY"
+    $regPath = "HKLM:\SOFTWARE\YYYYYLabs\YYYYYAgent"
+    $progFiles = "C:\Program Files\YYYYYOne"
     
     if (Test-Path $regPath) {
         $version = (Get-ItemProperty -Path $regPath -Name "Version" -ErrorAction SilentlyContinue).Version
-        $appFolder = Get-ChildItem -Path $progFiles -Filter "YYYYYYYYY Agent*" -Directory | Select-Object -First 1
+        $appFolder = Get-ChildItem -Path $progFiles -Filter "YYYYY Agent*" -Directory | Select-Object -First 1
         
         if ($appFolder) {
-            $bin1 = Test-Path (Join-Path $appFolder.FullName "YYYYYYYYYAgent.exe")
-            $bin2 = Test-Path (Join-Path $appFolder.FullName "YYYYYYYYYctl.exe")
+            $bin1 = Test-Path (Join-Path $appFolder.FullName "YYYYYAgent.exe")
+            $bin2 = Test-Path (Join-Path $appFolder.FullName "YYYYYctl.exe")
             
             if ($bin1 -and $bin2) {
                 return $version
@@ -25,9 +25,9 @@ if ($currentStatus) {
 }
 
 $timestamp = Get-Date -Format "yyyyMMdd_HHmm"
-$installerDir = "C:\temp\YYYYYYYYY_installer"
-$msiPath = Join-Path $installerDir "YYYYYYYYY.msi"
-$logPath = Join-Path $installerDir "YYYYYYYYYinstall_$timestamp.log"
+$installerDir = "C:\temp\YYYYY_installer"
+$msiPath = Join-Path $installerDir "YYYYYOne.msi"
+$logPath = Join-Path $installerDir "YYYYYinstall_$timestamp.log"
 $token = "XXXXX"
 
 if (-not (Test-Path $msiPath)) {
