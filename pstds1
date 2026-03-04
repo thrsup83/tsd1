@@ -1,18 +1,23 @@
-$path = "SOFTWARE\YYYYY Labs\YYYYYAgent"
+$searchName = "YYYYY Agent"
+$uninstallPath = "SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall"
 
-# Força a abertura da colmeia 64-bit para evitar o erro de redirecionamento do ISE
-$key = [Microsoft.Win32.RegistryKey]::OpenBaseKey([Microsoft.Win32.RegistryHive]::LocalMachine, [Microsoft.Win32.RegistryView]::Registry64)
-$subKey = $key.OpenSubKey($path)
+$machineKey = [Microsoft.Win32.RegistryKey]::OpenBaseKey([Microsoft.Win32.RegistryHive]::LocalMachine, [Microsoft.Win32.RegistryView]::Registry64)
+$apps = $machineKey.OpenSubKey($uninstallPath)
 
-if ($subKey) {
-    $version = $subKey.GetValue("Version")
-    if ($version) {
+$found = $false
+
+foreach ($subKeyName in $apps.GetSubKeyNames()) {
+    $subKey = $apps.OpenSubKey($subKeyName)
+    $displayName = $subKey.GetValue("DisplayName")
+    
+    if ($displayName -like "*$searchName*") {
+        $version = $subKey.GetValue("DisplayVersion")
         Write-Output "OK - $version"
-    } else {
-        Write-Output "fail - Chave encontrada, mas valor 'Version' esta vazio ou inexiste"
+        $found = $true
+        break
     }
-    $subKey.Close()
-} else {
-    Write-Output "fail - Caminho do registro nao encontrado (Verifique o Replace de YYYYY)"
 }
-$key.Close()
+
+if (-not $found) {
+    Write-Output "fail - Nao encontrado no Painel de Controle"
+}
