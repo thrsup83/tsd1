@@ -1,3 +1,29 @@
+function Get-YYYYYStatus {
+    $regPath = "HKLM:\SOFTWARE\YYYYYYYYY\YYYYYYYYY"
+    $progFiles = "C:\Program Files\YYYYYYYYY"
+    
+    if (Test-Path $regPath) {
+        $version = (Get-ItemProperty -Path $regPath -Name "Version" -ErrorAction SilentlyContinue).Version
+        $appFolder = Get-ChildItem -Path $progFiles -Filter "YYYYYYYYY Agent*" -Directory | Select-Object -First 1
+        
+        if ($appFolder) {
+            $bin1 = Test-Path (Join-Path $appFolder.FullName "YYYYYYYYYAgent.exe")
+            $bin2 = Test-Path (Join-Path $appFolder.FullName "YYYYYYYYYctl.exe")
+            
+            if ($bin1 -and $bin2) {
+                return $version
+            }
+        }
+    }
+    return $null
+}
+
+$currentStatus = Get-YYYYYStatus
+if ($currentStatus) {
+    Write-Output "OK - $currentStatus"
+    exit 0
+}
+
 $timestamp = Get-Date -Format "yyyyMMdd_HHmm"
 $installerDir = "C:\temp\YYYYYYYYY_installer"
 $msiPath = Join-Path $installerDir "YYYYYYYYY.msi"
@@ -12,25 +38,19 @@ if (-not (Test-Path $msiPath)) {
 $args = "/i `"$msiPath`" /qn SITE_TOKEN=$token /norestart /L*V `"$logPath`""
 $process = Start-Process -FilePath "msiexec.exe" -ArgumentList $args -Wait -PassThru
 
-$regPath = "HKLM:\SOFTWARE\YYYYYYYYY\YYYYYYYYY"
-$progFiles = "C:\Program Files\YYYYYYYYY"
+Start-Sleep -Seconds 120
 
-if (Test-Path $regPath) {
-    $version = (Get-ItemProperty -Path $regPath -Name "Version" -ErrorAction SilentlyContinue).Version
-    $appFolder = Get-ChildItem -Path $progFiles -Filter "YYYYYYYYY*" -Directory | Select-Object -First 1
-    
-    if ($appFolder) {
-        $bin1 = Test-Path (Join-Path $appFolder.FullName "YYYYYYYYYAgent.exe")
-        $bin2 = Test-Path (Join-Path $appFolder.FullName "YYYYYYYYYctl.exe")
-        
-        if ($bin1 -and $bin2) {
-            Write-Output "OK - $version"
-        } else {
-            Write-Output "fail"
-        }
-    } else {
-        Write-Output "fail"
-    }
+$postInstallStatus = Get-YYYYYStatus
+if ($postInstallStatus) {
+    Write-Output "OK - $postInstallStatus"
+    exit 0
+}
+
+Start-Sleep -Seconds 60
+
+$finalStatus = Get-YYYYYStatus
+if ($finalStatus) {
+    Write-Output "OK - $finalStatus"
 } else {
     Write-Output "fail"
 }
