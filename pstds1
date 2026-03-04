@@ -1,16 +1,18 @@
-$regPath = "HKLM:\SOFTWARE\YYYYY Labs\YYYYYAgent"
+$path = "SOFTWARE\YYYYY Labs\YYYYYAgent"
 
-if (Test-Path $regPath) {
-    $item = Get-ItemProperty -Path $regPath -ErrorAction SilentlyContinue
-    $version = $item.Version
-    
+# Força a abertura da colmeia 64-bit para evitar o erro de redirecionamento do ISE
+$key = [Microsoft.Win32.RegistryKey]::OpenBaseKey([Microsoft.Win32.RegistryHive]::LocalMachine, [Microsoft.Win32.RegistryView]::Registry64)
+$subKey = $key.OpenSubKey($path)
+
+if ($subKey) {
+    $version = $subKey.GetValue("Version")
     if ($version) {
         Write-Output "OK - $version"
     } else {
-        Write-Output "fail - Valor 'Version' nao encontrado na chave"
-        # Lista o que o PS está enxergando na chave para conferir o nome correto:
-        $item | Select-Object * -ExcludeProperty PSPath,PSParentPath,PSChildName,PSDrive,PSProvider
+        Write-Output "fail - Chave encontrada, mas valor 'Version' esta vazio ou inexiste"
     }
+    $subKey.Close()
 } else {
-    Write-Output "fail - Caminho do registro nao encontrado"
+    Write-Output "fail - Caminho do registro nao encontrado (Verifique o Replace de YYYYY)"
 }
+$key.Close()
