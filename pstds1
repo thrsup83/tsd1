@@ -4,15 +4,8 @@ function Get-YYYYYStatus {
     
     if (Test-Path $regPath) {
         $version = (Get-ItemProperty -Path $regPath -Name "Version" -ErrorAction SilentlyContinue).Version
-        $appFolder = Get-ChildItem -Path $progFiles -Filter "YYYYY Agent*" -Directory | Select-Object -First 1
-        
-        if ($appFolder) {
-            $bin1 = Test-Path (Join-Path $appFolder.FullName "YYYYYAgent.exe")
-            $bin2 = Test-Path (Join-Path $appFolder.FullName "YYYYYctl.exe")
-            
-            if ($bin1 -and $bin2) {
-                return $version
-            }
+        if (Test-Path $progFiles) {
+            return $version
         }
     }
     return $null
