@@ -1,4 +1,7 @@
-$msiPath = "C:\temp\YYYYYYYYY_installer\YYYYYYYYY.msi"
+$timestamp = Get-Date -Format "yyyyMMdd_HHmm"
+$installerDir = "C:\temp\YYYYYYYYY_installer"
+$msiPath = Join-Path $installerDir "YYYYYYYYY.msi"
+$logPath = Join-Path $installerDir "YYYYYYYYYinstall_$timestamp.log"
 $token = "XXXXX"
 
 if (-not (Test-Path $msiPath)) {
@@ -6,7 +9,8 @@ if (-not (Test-Path $msiPath)) {
     exit 1
 }
 
-$process = Start-Process -FilePath "msiexec.exe" -ArgumentList "/i `"$msiPath`" /qn PROPERTY_NAME=$token /norestart" -Wait -PassThru
+$args = "/i `"$msiPath`" /qn SITE_TOKEN=$token /norestart /L*V `"$logPath`""
+$process = Start-Process -FilePath "msiexec.exe" -ArgumentList $args -Wait -PassThru
 
 $regPath = "HKLM:\SOFTWARE\YYYYYYYYY\YYYYYYYYY"
 $progFiles = "C:\Program Files\YYYYYYYYY"
@@ -16,8 +20,8 @@ if (Test-Path $regPath) {
     $appFolder = Get-ChildItem -Path $progFiles -Filter "YYYYYYYYY*" -Directory | Select-Object -First 1
     
     if ($appFolder) {
-        $bin1 = Test-Path (Join-Path $appFolder.FullName "binary1.exe")
-        $bin2 = Test-Path (Join-Path $appFolder.FullName "binary2.exe")
+        $bin1 = Test-Path (Join-Path $appFolder.FullName "YYYYYYYYYAgent.exe")
+        $bin2 = Test-Path (Join-Path $appFolder.FullName "YYYYYYYYYctl.exe")
         
         if ($bin1 -and $bin2) {
             Write-Output "OK - $version"
