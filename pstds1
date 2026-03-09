@@ -1,37 +1,14 @@
-$serverList = Get-Content "z:\THS\SO_1\SO_1_Servers.txt"
-$sourceFile = "z:\THS\SO_1\YYYYYOne.msi"
-$destDir = "temp\SO_Inst1"
+@echo off
+set FOLDER_NAME=Oracle_setup_030926
+set INSTALL_DIR=C:\temp\%FOLDER_NAME%
+set LOGFILE=%INSTALL_DIR%\install_debug.log
 
-foreach ($server in $serverList) {
-    if (Test-Connection -ComputerName $server -Count 1 -Quiet) {
-        try {
-            $remoteFolder = "\\$server\C$\$destDir"
-            $remoteFile = Join-Path $remoteFolder "YYYYYOne.msi"
+if not exist "%INSTALL_DIR%" mkdir "%INSTALL_DIR%"
 
-            # 1. Create directory if missing
-            if (-not (Test-Path $remoteFolder)) {
-                New-Item -Path $remoteFolder -ItemType Directory -Force | Out-Null
-            }
+echo [%date% %time%] Starting file copy to %INSTALL_DIR%... > "%LOGFILE%"
+xcopy "%~dp0*.*" "%INSTALL_DIR%\" /s /e /i /y >> "%LOGFILE%" 2>&1
 
-            # 2. Check if file already exists
-            if (Test-Path $remoteFile) {
-                Write-Output "SKIP: $server - File already exists"
-            } else {
-                # 3. Copy file
-                Copy-Item -Path $sourceFile -Destination $remoteFolder -Force -ErrorAction Stop
-                
-                # 4. Final verification
-                if (Test-Path $remoteFile) {
-                    Write-Output "SUCCESS: $server - File copied"
-                } else {
-                    Write-Output "FAILED: $server - Verification failed after copy"
-                }
-            }
-        }
-        catch {
-            Write-Output "ERROR: $server - $($_.Exception.Message)"
-        }
-    } else {
-        Write-Output "OFFLINE: $server"
-    }
-}
+echo [%date% %time%] Starting Oracle setup... >> "%LOGFILE%"
+start /wait "" "%INSTALL_DIR%\setup.exe" -silent -responseFile "%INSTALL_DIR%\Oracle12C64bit.rsp" >> "%LOGFILE%" 2>&1
+
+echo [%date% %time%] Installation finished with Exit Code: %errorlevel% >> "%LOGFILE%"
