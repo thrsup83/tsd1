@@ -1,5 +1,8 @@
 @echo off
-set FOLDER_NAME=Oracle_setup_030926
+for /f "tokens=2 delims==" %%a in ('wmic OS Get localdatetime /value') do set "dt=%%a"
+set "TODAY=%dt:~4,2%%dt:~6,2%%dt:~2,2%"
+
+set FOLDER_NAME=Oracle_setup_%TODAY%
 set INSTALL_DIR=C:\temp\%FOLDER_NAME%
 set LOGFILE=%INSTALL_DIR%\install_debug.log
 
