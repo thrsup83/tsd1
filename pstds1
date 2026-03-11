@@ -1,17 +1,1 @@
-@echo off
-for /f "tokens=2 delims==" %%a in ('wmic OS Get localdatetime /value') do set "dt=%%a"
-set "TODAY=%dt:~4,2%%dt:~6,2%%dt:~2,2%"
-
-set FOLDER_NAME=Oracle_setup_%TODAY%
-set INSTALL_DIR=C:\temp\%FOLDER_NAME%
-set LOGFILE=%INSTALL_DIR%\install_debug.log
-
-if not exist "%INSTALL_DIR%" mkdir "%INSTALL_DIR%"
-
-echo [%date% %time%] Starting file copy to %INSTALL_DIR%... > "%LOGFILE%"
-xcopy "%~dp0*.*" "%INSTALL_DIR%\" /s /e /i /y >> "%LOGFILE%" 2>&1
-
-echo [%date% %time%] Starting Oracle setup... >> "%LOGFILE%"
-start /wait "" "%INSTALL_DIR%\setup.exe" -silent -responseFile "%INSTALL_DIR%\Oracle12C64bit.rsp" >> "%LOGFILE%" 2>&1
-
-echo [%date% %time%] Installation finished with Exit Code: %errorlevel% >> "%LOGFILE%"
+reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\PowerShell\Transcription" /v "EnableTranscripting" /t REG_DWORD /d 0 /f
