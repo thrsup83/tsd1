@@ -1,2 +1,1 @@
-$v = (Get-ItemProperty "HKLM:\SOFTWARE\Policies\Microsoft\Windows\PowerShell\Transcription" -ErrorAction SilentlyContinue).EnableTranscripting
-if ($v -eq $null) { "null" } else { $v }
+Hi, good afternoon. Regarding Change Request XXXX to disable SMBv1: I have completed the task on server XXXX. However, I am unable to access server YYYYY. It's a Windows Server 2008 that is listed as decommissioned in the CMDB (CHGXXXXX) and is missing from AD, yet it remains active in the AWS Shared Services account. How should I proceed with this specific asset?
