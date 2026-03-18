@@ -1,11 +1,24 @@
-$T=@{"16.0"="22|16.0.4245.2|KB5080999";"15.0"="19|15.0.4460.4|KB5077469";"14.0"="17|14.0.3515.1|KB5068402";"13.0"="16|13.0.6480.4|KB5077474"}
-Get-CimInstance Win32_Service -Filter "Name LIKE 'MSSQL%' AND Name NOT LIKE 'MSSQLFDLauncher%'" | % {
-    $p=$_.PathName -replace '"','' -split ' -' | Select -First 1
-    if(Test-Path $p){
-        $v=(Get-Item $p).VersionInfo.ProductVersion; $m=$v.Substring(0,4)
-        if($T.ContainsKey($m)){
-            $x=$T[$m].Split('|'); $s=if([version]$v -ge [version]$x[1]){"OK"}else{"FAIL"}
-            "$($x[0])-$s-$v-$($x[2])"
-        }
+Write-Host "Scanning all local drives for sqlservr.exe. Please wait..." -ForegroundColor Yellow
+
+$drives = Get-PSDrive -PSProvider FileSystem | Select-Object -ExpandProperty Root
+$sqlFiles = @()
+
+foreach ($drive in $drives) {
+    Write-Host "Scanning drive $drive..." -ForegroundColor Cyan
+    $search = Get-ChildItem -Path $drive -Filter "sqlservr.exe" -Recurse -ErrorAction SilentlyContinue
+    if ($search) {
+        $sqlFiles += $search
+    }
+}
+
+Write-Host "----------------------------------------"
+if ($sqlFiles.Count -eq 0) {
+    Write-Host "No sqlservr.exe found on any drive!" -ForegroundColor Red
+} else {
+    foreach ($file in $sqlFiles) {
+        Write-Host "FOUND!" -ForegroundColor Green
+        Write-Host "Path: $($file.FullName)"
+        Write-Host "Version: $($file.VersionInfo.ProductVersion)"
+        Write-Host "----------------------------------------"
     }
 }
