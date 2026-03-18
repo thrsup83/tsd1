@@ -1,9 +1,1 @@
-$T=@{"16.0"="22|16.0.4245.2|KB5080999";"15.0"="19|15.0.4460.4|KB5077469";"14.0"="17|14.0.3515.1|KB5068402";"13.0"="16|13.0.6480.4|KB5077474"}
-
-gci "C:\Program Files\Microsoft SQL Server\MSSQL*" -Rec -Inc "sqlservr.exe" -EA 0 | % {
-    $v=$_.VersionInfo.ProductVersion; $m=$v.Substring(0,4)
-    if($T.ContainsKey($m)){
-        $x=$T[$m].Split('|'); $s=if([version]$v -ge [version]$x[1]){"OK"}else{"FAIL"}
-        "$($x[0])-$s-$v-$($x[2])"
-    }
-}
+(Get-ChildItem "C:\Program Files\Microsoft SQL Server\MSSQL*" -Recurse -Include "sqlservr.exe" -ErrorAction SilentlyContinue).VersionInfo.ProductVersion
