@@ -1,5 +1,6 @@
-$Password = "XXXX" 
+$Password = "XXXX"
 $LogPath = "C:\Windows\Temp\log1.txt"
+$SetupFolder = "C:\temp\fe"
 
 function Write-Log {
     param ([string]$Message)
@@ -9,33 +10,20 @@ function Write-Log {
     Write-Host $LogLine
 }
 
-Write-Log "Starting pure PowerShell Trellix/FireEye uninstallation process..."
+Write-Log "Starting uninstallation using the setup file in $SetupFolder..."
 
-# Varre o Registro (32 e 64 bits) para encontrar a instalação nativa do FireEye
-$RegistryPaths = @(
-    "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*",
-    "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*"
-)
+$InstallerFile = Get-ChildItem -Path $SetupFolder -Filter "xagtSetup*.msi" -ErrorAction SilentlyContinue | Select-Object -First 1
 
-$FireEyeApp = Get-ItemProperty $RegistryPaths -ErrorAction SilentlyContinue | Where-Object { 
-    $_.DisplayName -match "FireEye Endpoint Agent" -or $_.DisplayName -match "Trellix Endpoint Agent"
-}
-
-if (-not $FireEyeApp) {
-    Write-Log "CRITICAL ERROR: FireEye/Trellix installation not found in the Windows Registry."
-    Write-Host "Scan failed. Product not found." -ForegroundColor Red
+if (-not $InstallerFile) {
+    Write-Log "CRITICAL ERROR: xagtSetup MSI file not found in $SetupFolder."
+    Write-Host "File not found. Check the log." -ForegroundColor Red
     return
 }
 
-# Extrai o ID (GUID) exato da instalação no seu sistema
-$ProductGUID = $FireEyeApp[0].PSChildName
-Write-Log "Success: Product found in registry. GUID: $ProductGUID"
-
-# Monta o comando perfeito para o msiexec (nativo do Windows) não dar o erro 1360
-$Arguments = "/x `"$ProductGUID`" /qn /norestart UNINSTALL_PASSWORD=`"$Password`""
+$Arguments = "/x `"$($InstallerFile.FullName)`" /qn /norestart UNINSTALL_PASSWORD=`"$Password`""
 
 try {
-    Write-Log "Executing MSI uninstallation command..."
+    Write-Log "Executing command: msiexec.exe $Arguments"
     
     $Process = Start-Process -FilePath "msiexec.exe" -ArgumentList $Arguments -Wait -NoNewWindow -PassThru
     
@@ -43,12 +31,12 @@ try {
         Write-Log "Uninstallation completed successfully. Exit code: $($Process.ExitCode)"
         Write-Host "Uninstallation completed!" -ForegroundColor Green
     } else {
-        Write-Log "Uninstallation failed. The installer returned error code: $($Process.ExitCode)"
+        Write-Log "Uninstallation failed. Exit code: $($Process.ExitCode)"
         Write-Host "Uninstallation error. Code: $($Process.ExitCode)" -ForegroundColor Red
     }
 
 } catch {
-    Write-Log "CRITICAL ERROR: Failed to start msiexec. Details: $_"
+    Write-Log "CRITICAL ERROR: Failed to start the process. Details: $_"
 }
 
 Write-Log "Script finished."
