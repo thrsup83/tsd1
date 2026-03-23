@@ -1,42 +1,26 @@
-$Password = "XXXX"
-$LogPath = "C:\Windows\Temp\log1.txt"
-$SetupFolder = "C:\temp\fe"
+# Script to remove FireEye HX Agent
 
-function Write-Log {
-    param ([string]$Message)
-    $DateTime = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-    $LogLine = "[$DateTime] $Message"
-    Add-Content -Path $LogPath -Value $LogLine
-    Write-Host $LogLine
+Write-Host "Searching for installed FireEye HX Agent..."
+
+# Search for FireEye product
+$produto = Get-WmiObject -Class Win32_Product | Where-Object {
+    $_.Name -like "*FireEye*" -or $_.Name -like "*Trellix*"
 }
 
-Write-Log "Starting uninstallation using the setup file in $SetupFolder..."
+if ($produto) {
+    Write-Host "Product found: $($produto.Name)"
+    Write-Host "Starting removal..."
 
-$InstallerFile = Get-ChildItem -Path $SetupFolder -Filter "xagtSetup*.msi" -ErrorAction SilentlyContinue | Select-Object -First 1
+    # If your installation requires a password, enter it here:
+    $password = "XXXX"
 
-if (-not $InstallerFile) {
-    Write-Log "CRITICAL ERROR: xagtSetup MSI file not found in $SetupFolder."
-    Write-Host "File not found. Check the log." -ForegroundColor Red
-    return
-}
-
-$Arguments = "/x `"$($InstallerFile.FullName)`" /qn /norestart UNINSTALL_PASSWORD=`"$Password`""
-
-try {
-    Write-Log "Executing command: msiexec.exe $Arguments"
+    # Execute silent uninstall
+    # Ajustes: UNINSTALL_PASSWORD, aspas na senha (`" `") e o -Wait.
+    $Argumentos = "/x $($produto.IdentifyingNumber) /qn UNINSTALL_PASSWORD=`"$password`" /norestart"
     
-    $Process = Start-Process -FilePath "msiexec.exe" -ArgumentList $Arguments -Wait -NoNewWindow -PassThru
-    
-    if ($Process.ExitCode -eq 0 -or $Process.ExitCode -eq 3010) {
-        Write-Log "Uninstallation completed successfully. Exit code: $($Process.ExitCode)"
-        Write-Host "Uninstallation completed!" -ForegroundColor Green
-    } else {
-        Write-Log "Uninstallation failed. Exit code: $($Process.ExitCode)"
-        Write-Host "Uninstallation error. Code: $($Process.ExitCode)" -ForegroundColor Red
-    }
+    Start-Process "msiexec.exe" -ArgumentList $Argumentos -Wait -NoNewWindow
 
-} catch {
-    Write-Log "CRITICAL ERROR: Failed to start the process. Details: $_"
+    Write-Host "Removal completed."
+} else {
+    Write-Host "No FireEye product found."
 }
-
-Write-Log "Script finished."
