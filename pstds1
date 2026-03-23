@@ -8,7 +8,6 @@ $App = Get-ItemProperty $RegistryPaths -ErrorAction SilentlyContinue | Where-Obj
 }
 
 if ($App) {
-    # Captura a versão. Caso encontre mais de um componente, usa o primeiro.
     $Version = $App[0].DisplayVersion
     Write-Host "installed-$Version"
 } else {
