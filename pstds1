@@ -9,35 +9,34 @@ function Write-Log {
     Write-Host $LogLine
 }
 
-Write-Log "Starting automated Trellix/FireEye uninstallation process..."
+Write-Log "Starting automated Trellix/FireEye uninstallation process via MSI..."
 
-$PossiblePaths = @(
-    "C:\Program Files (x86)\FireEye\xagt\xagt.exe",
-    "C:\Program Files\FireEye\xagt\xagt.exe",
-    "C:\Program Files\Trellix\Agent\xagt.exe"
+$RegistryPaths = @(
+    "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*",
+    "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*"
 )
 
-$ExecutablePath = $null
-foreach ($Path in $PossiblePaths) {
-    if (Test-Path -Path $Path) {
-        $ExecutablePath = $Path
-        Write-Log "Success: Executable found at: $ExecutablePath"
-        break
-    }
+$FireEyeApp = Get-ItemProperty $RegistryPaths -ErrorAction SilentlyContinue | Where-Object { 
+    $_.DisplayName -match "FireEye Endpoint Agent" -or $_.DisplayName -match "Trellix Endpoint Agent"
 }
 
-if (-not $ExecutablePath) {
-    Write-Log "CRITICAL ERROR: xagt.exe executable not found in default directories."
-    Write-Host "Scan failed. Check the log." -ForegroundColor Red
+if (-not $FireEyeApp) {
+    Write-Log "CRITICAL ERROR: FireEye/Trellix installation not found in the Windows Registry."
+    Write-Host "Scan failed. Product not found." -ForegroundColor Red
     return
 }
 
-$Arguments = "-uninstall -password `"$Password`""
+# Caso encontre mais de um componente associado, pega o ID do componente principal
+$ProductGUID = $FireEyeApp[0].PSChildName
+Write-Log "Success: Product found in registry. GUID: $ProductGUID"
+
+# Monta os argumentos no formato exigido pelo Windows Installer e pela Trellix
+$Arguments = "/x `"$ProductGUID`" /qn /norestart UNINSTALL_PASSWORD=`"$Password`""
 
 try {
-    Write-Log "Executing uninstallation command..."
+    Write-Log "Executing MSI uninstallation command..."
     
-    $Process = Start-Process -FilePath $ExecutablePath -ArgumentList $Arguments -Wait -NoNewWindow -PassThru
+    $Process = Start-Process -FilePath "msiexec.exe" -ArgumentList $Arguments -Wait -NoNewWindow -PassThru
     
     if ($Process.ExitCode -eq 0 -or $Process.ExitCode -eq 3010) {
         Write-Log "Uninstallation completed successfully. Exit code: $($Process.ExitCode)"
@@ -48,7 +47,7 @@ try {
     }
 
 } catch {
-    Write-Log "CRITICAL ERROR: Failed to start the process. Details: $_"
+    Write-Log "CRITICAL ERROR: Failed to start msiexec. Details: $_"
 }
 
 Write-Log "Script finished."
