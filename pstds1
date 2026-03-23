@@ -1,1 +1,15 @@
+$RegistryPaths = @(
+    "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*",
+    "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*"
+)
 
+$App = Get-ItemProperty $RegistryPaths -ErrorAction SilentlyContinue | Where-Object { 
+    $_.DisplayName -match "FireEye" -or $_.DisplayName -match "Trellix"
+}
+
+if ($App) {
+    # If it finds the app, we output a string. SCCM reads this as "Installed".
+    Write-Host "Installed"
+}
+
+# If it doesn't find the app, it outputs nothing. SCCM reads this as "Not Installed" (Uninstall successful).
