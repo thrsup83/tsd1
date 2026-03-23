@@ -1,4 +1,3 @@
-$Password = "XXXX" 
 $LogPath = "C:\Windows\Temp\log1.txt"
 
 function Write-Log {
@@ -9,45 +8,43 @@ function Write-Log {
     Write-Host $LogLine
 }
 
-Write-Log "Starting automated Trellix/FireEye uninstallation process via MSI..."
+Write-Log "Starting FireEye/Trellix brute-force cleanup process..."
 
-$RegistryPaths = @(
-    "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*",
-    "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*"
-)
+# Pega o diretório atual onde este script está rodando
+$CurrentDir = $PSScriptRoot
+if ([string]::IsNullOrEmpty($CurrentDir)) { $CurrentDir = "." }
 
-$FireEyeApp = Get-ItemProperty $RegistryPaths -ErrorAction SilentlyContinue | Where-Object { 
-    $_.DisplayName -match "FireEye Endpoint Agent" -or $_.DisplayName -match "Trellix Endpoint Agent"
-}
+$CleanupToolPath = Join-Path -Path $CurrentDir -ChildPath "FireEyeAgentCleanupTool.exe"
 
-if (-not $FireEyeApp) {
-    Write-Log "CRITICAL ERROR: FireEye/Trellix installation not found in the Windows Registry."
-    Write-Host "Scan failed. Product not found." -ForegroundColor Red
+# Verifica se a ferramenta de limpeza está na mesma pasta
+if (-not (Test-Path -Path $CleanupToolPath)) {
+    Write-Log "CRITICAL ERROR: FireEyeAgentCleanupTool.exe not found in the script directory."
+    Write-Host "Cleanup tool not found. Please place the script in the same folder as the .exe" -ForegroundColor Red
     return
 }
 
-# Caso encontre mais de um componente associado, pega o ID do componente principal
-$ProductGUID = $FireEyeApp[0].PSChildName
-Write-Log "Success: Product found in registry. GUID: $ProductGUID"
-
-# Monta os argumentos no formato exigido pelo Windows Installer e pela Trellix
-$Arguments = "/x `"$ProductGUID`" /qn /norestart UNINSTALL_PASSWORD=`"$Password`""
-
 try {
-    Write-Log "Executing MSI uninstallation command..."
+    Write-Log "Executing Cleanup Tool: $CleanupToolPath /Cleanup"
     
-    $Process = Start-Process -FilePath "msiexec.exe" -ArgumentList $Arguments -Wait -NoNewWindow -PassThru
+    # Roda a ferramenta de limpeza. O parâmetro /Cleanup é o padrão da fabricante para forçar a remoção.
+    $Arguments = "/Cleanup"
+    
+    # O -Wait garante que o PowerShell só avance quando a ferramenta terminar totalmente o serviço
+    $Process = Start-Process -FilePath $CleanupToolPath -ArgumentList $Arguments -Wait -NoNewWindow -PassThru
+    
+    Write-Log "Cleanup Tool finished. Exit code: $($Process.ExitCode)"
     
     if ($Process.ExitCode -eq 0 -or $Process.ExitCode -eq 3010) {
-        Write-Log "Uninstallation completed successfully. Exit code: $($Process.ExitCode)"
-        Write-Host "Uninstallation completed!" -ForegroundColor Green
+        Write-Host "Force cleanup completed successfully!" -ForegroundColor Green
+        if ($Process.ExitCode -eq 3010) {
+            Write-Log "Warning: A reboot is highly recommended after a force cleanup."
+        }
     } else {
-        Write-Log "Uninstallation failed. The installer returned error code: $($Process.ExitCode)"
-        Write-Host "Uninstallation error. Code: $($Process.ExitCode)" -ForegroundColor Red
+        Write-Host "Cleanup finished with abnormal code: $($Process.ExitCode). Check the system." -ForegroundColor Yellow
     }
 
 } catch {
-    Write-Log "CRITICAL ERROR: Failed to start msiexec. Details: $_"
+    Write-Log "CRITICAL ERROR: Failed to start Cleanup Tool. Details: $_"
 }
 
 Write-Log "Script finished."
