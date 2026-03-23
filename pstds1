@@ -1,1 +1,54 @@
+$Password = "XXXX" 
+$LogPath = "C:\Windows\Temp\log1.txt"
 
+function Write-Log {
+    param ([string]$Message)
+    $DateTime = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+    $LogLine = "[$DateTime] $Message"
+    Add-Content -Path $LogPath -Value $LogLine
+    Write-Host $LogLine
+}
+
+Write-Log "Starting automated Trellix/FireEye uninstallation process..."
+
+$PossiblePaths = @(
+    "C:\Program Files (x86)\FireEye\xagt\xagt.exe",
+    "C:\Program Files\FireEye\xagt\xagt.exe",
+    "C:\Program Files\Trellix\Agent\xagt.exe"
+)
+
+$ExecutablePath = $null
+foreach ($Path in $PossiblePaths) {
+    if (Test-Path -Path $Path) {
+        $ExecutablePath = $Path
+        Write-Log "Success: Executable found at: $ExecutablePath"
+        break
+    }
+}
+
+if (-not $ExecutablePath) {
+    Write-Log "CRITICAL ERROR: xagt.exe executable not found in default directories."
+    Write-Host "Scan failed. Check the log." -ForegroundColor Red
+    return
+}
+
+$Arguments = "-uninstall -password `"$Password`""
+
+try {
+    Write-Log "Executing uninstallation command..."
+    
+    $Process = Start-Process -FilePath $ExecutablePath -ArgumentList $Arguments -Wait -NoNewWindow -PassThru
+    
+    if ($Process.ExitCode -eq 0 -or $Process.ExitCode -eq 3010) {
+        Write-Log "Uninstallation completed successfully. Exit code: $($Process.ExitCode)"
+        Write-Host "Uninstallation completed!" -ForegroundColor Green
+    } else {
+        Write-Log "Uninstallation failed. The installer returned error code: $($Process.ExitCode)"
+        Write-Host "Uninstallation error. Code: $($Process.ExitCode)" -ForegroundColor Red
+    }
+
+} catch {
+    Write-Log "CRITICAL ERROR: Failed to start the process. Details: $_"
+}
+
+Write-Log "Script finished."
