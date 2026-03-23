@@ -8,8 +8,9 @@ $App = Get-ItemProperty $RegistryPaths -ErrorAction SilentlyContinue | Where-Obj
 }
 
 if ($App) {
-    # If it finds the app, we output a string. SCCM reads this as "Installed".
-    Write-Host "Installed"
+    # Captura a versão. Caso encontre mais de um componente, usa o primeiro.
+    $Version = $App[0].DisplayVersion
+    Write-Host "installed-$Version"
+} else {
+    Write-Host "not instaled"
 }
-
-# If it doesn't find the app, it outputs nothing. SCCM reads this as "Not Installed" (Uninstall successful).
