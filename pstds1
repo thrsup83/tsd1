@@ -1,1 +1,11 @@
 
+Get-Item -Path "C:\Windows\SysWOW64\msxml4.dll" | Select-Object -Property VersionInfo | Format-List
+
+
+Get-ChildItem -Path "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*" | 
+    Get-ItemProperty | 
+    Where-Object { $_.DisplayName -like "*MSXML 4.0*" } | 
+    Select-Object DisplayName, PSChildName, UninstallString
+
+
+Test-Path "C:\Windows\SysWOW64\msxml4.dll"
