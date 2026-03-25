@@ -1,1 +1,1 @@
-A vulnerability related to MSXML 4.0 was flagged on server XXX by Tenable. The scan suggests a KB that is already applied, but it also notes the product is EOL. While MSXML 6.0 is the current standard, we are unsure if your application still requires version 4.0. If it can be decommissioned, let me know and I will raise a Change Request for its removal. Otherwise, a CSRA must be opened by the application owner to document the risk. We are available for technical guidance, but since we have no direct action on this, we need to move the ticket to your queue.
+
