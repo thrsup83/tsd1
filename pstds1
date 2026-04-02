@@ -1,12 +1,31 @@
+$ports = @(80, 443, 10123)
 
-$computer = "NJHARRFD01"
-
-if (Test-Connection -ComputerName $computer -Count 2 -Quiet) {
-    Write-Host "Server is Online. Checking Service..." -ForegroundColor Green
-    Get-Service -ComputerName $computer -Name "CcmExec" -ErrorAction SilentlyContinue | Select-Object Name, Status, StartType
+Write-Host "--- Health Check ---" -ForegroundColor Cyan
+try {
+    $svc = Get-Service -Name CcmExec -ErrorAction Stop
+    Write-Host "Service CcmExec: $($svc.Status)" -ForegroundColor Green
     
-    Write-Host "Checking Admin Share access..." -ForegroundColor Yellow
-    Test-Path "\\$computer\admin$"
-} else {
-    Write-Host "Server is Offline or ICMP is blocked." -ForegroundColor Red
+    $wmiCim = Get-WmiObject -Namespace "root\cimv2" -Class Win32_OperatingSystem -ErrorAction Stop
+    Write-Host "WMI root\cimv2: OK" -ForegroundColor Green
+    
+    $wmiSccm = Get-WmiObject -Namespace "root\ccm" -Class SMS_Client -ErrorAction SilentlyContinue
+    if ($null -eq $wmiSccm) { 
+        Write-Host "WMI root\ccm: FAILED" -ForegroundColor Red 
+    } else { 
+        Write-Host "WMI root\ccm: OK ($($wmiSccm.ClientVersion))" -ForegroundColor Green 
+    }
+} catch {
+    Write-Host "Error: $($_.Exception.Message)" -ForegroundColor Red
+}
+
+Write-Host "`n--- Port Check ---" -ForegroundColor Cyan
+foreach ($port in $ports) {
+    $check = Test-NetConnection -ComputerName localhost -Port $port -WarningAction SilentlyContinue
+    Write-Host "Port $port: $(if($check.TcpTestSucceeded){'Open'}else{'Closed'})"
+}
+
+Write-Host "`n--- Log Errors ---" -ForegroundColor Cyan
+$logPath = "C:\Windows\CCM\Logs\CcmMessaging.log"
+if (Test-Path $logPath) {
+    Get-Content $logPath -Tail 100 | Select-String "error|failed|403|401|500" | Select-Object -Last 5
 }
