@@ -1,1 +1,12 @@
 
+$computer = "NJHARRFD01"
+
+if (Test-Connection -ComputerName $computer -Count 2 -Quiet) {
+    Write-Host "Server is Online. Checking Service..." -ForegroundColor Green
+    Get-Service -ComputerName $computer -Name "CcmExec" -ErrorAction SilentlyContinue | Select-Object Name, Status, StartType
+    
+    Write-Host "Checking Admin Share access..." -ForegroundColor Yellow
+    Test-Path "\\$computer\admin$"
+} else {
+    Write-Host "Server is Offline or ICMP is blocked." -ForegroundColor Red
+}
