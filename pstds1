@@ -1,20 +1,11 @@
-Write-Host "--- Agent Internal State ---" -ForegroundColor Cyan
+Write-Host "--- Active Management Point ---" -ForegroundColor Cyan
+Get-WmiObject -Namespace "root\ccm\LocationServices" -Class "SMS_ActiveManagementPoint" | Select-Object Name, Type
 
-# Check if agent is stuck in Provisioning Mode
-$pMode = Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\CCM\CcmExec" -Name "ProvisioningMode" -ErrorAction SilentlyContinue
-Write-Host "Provisioning Mode: $($pMode.ProvisioningMode)"
-
-# Check assigned Site Code
-$client = Get-WmiObject -Namespace "root\ccm" -Class "SMS_Client" -ErrorAction SilentlyContinue
-Write-Host "Assigned Site Code: $($client.ReportingSiteCode)"
-
-# Check for Proxy settings that might block SCCM traffic
-Write-Host "`n--- Proxy Configuration ---" -ForegroundColor Cyan
-netsh winhttp show proxy
-
-# Check Location Services Log for MP discovery
-Write-Host "`n--- Last 5 Location Services Errors ---" -ForegroundColor Cyan
+Write-Host "`n--- Boundary and Site Discovery ---" -ForegroundColor Cyan
 $log = "C:\Windows\CCM\Logs\LocationServices.log"
 if (Test-Path $log) {
-    Get-Content $log -Tail 100 | Select-String "error|failed" | Select-Object -Last 5
+    Get-Content $log -Tail 100 | Select-String "LSGetManagementPointsForSite|Boundary|AD site" | Select-Object -Last 5
 }
+
+Write-Host "`n--- AD Domain Info ---" -ForegroundColor Cyan
+[System.DirectoryServices.ActiveDirectory.ActiveDirectorySite]::GetComputerSite() | Select-Object Name
