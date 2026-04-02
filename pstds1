@@ -1,15 +1,5 @@
 $sccmServer = "YOUR_SCCM_MP_HERE"
-$ports = @(80, 443)
-
-foreach ($p in $ports) {
-    $t = Test-NetConnection -ComputerName $sccmServer -Port $p -WarningAction SilentlyContinue
-    $s = if($t.TcpTestSucceeded){"Open"}else{"CLOSED"}
-    Write-Host "MP $sccmServer Port $p : $s"
-}
-
-try {
-    $r = Invoke-WebRequest -Uri "http://$sccmServer/ccm_system/request" -Method Get -UseBasicParsing -ErrorAction Stop
-    Write-Host "HTTP Test: SUCCESS" -ForegroundColor Green
-} catch {
-    Write-Host "HTTP Test: FAILED ($($_.Exception.Message))" -ForegroundColor Red
-}
+$url = "http://$sccmServer/ccm_system/request"
+$wc = New-Object System.Net.WebClient
+$wc.Proxy = [System.Net.GlobalProxySelection]::GetEmptyWebProxy()
+$wc.DownloadString($url)
