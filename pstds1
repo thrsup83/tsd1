@@ -1,5 +1,20 @@
-$sccmServer = "YOUR_SCCM_MP_HERE"
-$url = "http://$sccmServer/ccm_system/request"
-$wc = New-Object System.Net.WebClient
-$wc.Proxy = [System.Net.GlobalProxySelection]::GetEmptyWebProxy()
-$wc.DownloadString($url)
+Write-Host "--- Agent Internal State ---" -ForegroundColor Cyan
+
+# Check if agent is stuck in Provisioning Mode
+$pMode = Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\CCM\CcmExec" -Name "ProvisioningMode" -ErrorAction SilentlyContinue
+Write-Host "Provisioning Mode: $($pMode.ProvisioningMode)"
+
+# Check assigned Site Code
+$client = Get-WmiObject -Namespace "root\ccm" -Class "SMS_Client" -ErrorAction SilentlyContinue
+Write-Host "Assigned Site Code: $($client.ReportingSiteCode)"
+
+# Check for Proxy settings that might block SCCM traffic
+Write-Host "`n--- Proxy Configuration ---" -ForegroundColor Cyan
+netsh winhttp show proxy
+
+# Check Location Services Log for MP discovery
+Write-Host "`n--- Last 5 Location Services Errors ---" -ForegroundColor Cyan
+$log = "C:\Windows\CCM\Logs\LocationServices.log"
+if (Test-Path $log) {
+    Get-Content $log -Tail 100 | Select-String "error|failed" | Select-Object -Last 5
+}
