@@ -1,11 +1,26 @@
-Write-Host "--- Active Management Point ---" -ForegroundColor Cyan
-Get-WmiObject -Namespace "root\ccm\LocationServices" -Class "SMS_ActiveManagementPoint" | Select-Object Name, Type
+Box 1: What are your top 3 key takeaways from this training?
+1-faithful: Understanding the exam structure, learning about cloud basics, and how to use the voucher.
 
-Write-Host "`n--- Boundary and Site Discovery ---" -ForegroundColor Cyan
-$log = "C:\Windows\CCM\Logs\LocationServices.log"
-if (Test-Path $log) {
-    Get-Content $log -Tail 100 | Select-String "LSGetManagementPointsForSite|Boundary|AD site" | Select-Object -Last 5
-}
+2-improved: Gaining a comprehensive understanding of Microsoft cloud fundamentals, exam requirements, and the voucher redemption process.
 
-Write-Host "`n--- AD Domain Info ---" -ForegroundColor Cyan
-[System.DirectoryServices.ActiveDirectory.ActiveDirectorySite]::GetComputerSite() | Select-Object Name
+3-formal: Acquiring a deeper understanding of Microsoft's foundational cloud ecosystem, the formal assessment framework, and the administrative protocols for certification vouchers.
+
+4-summarized: Cloud basics, exam structure, and voucher usage.
+
+Box 2: What are 2 things you still have questions about?
+1-faithful: More details on networking and security settings.
+
+2-improved: I would like more information on advanced cloud networking and the specifics of identity security management.
+
+3-formal: I possess remaining inquiries regarding complex network configurations and the implementation of advanced security protocols within identity management.
+
+4-summarized: Networking and identity security.
+
+Box 3: What is 1 thing you are going to use on the job?
+1-faithful: Using these basics to manage Windows Servers better.
+
+2-improved: Applying cloud foundational principles to optimize my daily management of Windows Server infrastructure.
+
+3-formal: Implementing cloud-based architectural standards to enhance the reliability and scalability of existing Windows infrastructure.
+
+4-summarized: Improving Windows Server infrastructure management.
