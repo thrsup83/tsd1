@@ -1,19 +1,1 @@
 
-@echo off
-
-set "LOCAL_DIR=C:\temp\GoldenImage"
-set "SERVER_NAME=NJNWKSMS08V"
-set "REMOTE_PATH=\\%SERVER_NAME%\Z$\GoldenImage"
-
-echo Starting...
-
-if not exist "%LOCAL_DIR%" (
-    echo Creating directory %LOCAL_DIR%...
-    mkdir "%LOCAL_DIR%"
-)
-
-echo Syncing files from %REMOTE_PATH%...
-
-robocopy "%REMOTE_PATH%" "%LOCAL_DIR%" /E /Z /R:3 /W:5 /MT:16 /NP /LOG:"C:\Windows\temp\GoldenImage_copy_log.txt"
-
-pause
