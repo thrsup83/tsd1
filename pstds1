@@ -1,18 +1,1 @@
 
-SELECT 
-    SMS_R_System.ResourceId, 
-    SMS_R_System.ResourceType, 
-    SMS_R_System.Name, 
-    SMS_R_System.SMSUniqueIdentifier, 
-    SMS_R_System.ResourceDomainORWorkgroup, 
-    SMS_R_System.Client 
-FROM SMS_R_System 
-INNER JOIN SMS_G_System_OPERATING_SYSTEM ON SMS_G_System_OPERATING_SYSTEM.ResourceId = SMS_R_System.ResourceId 
-WHERE 
-    (
-        SMS_R_System.NetbiosName LIKE "%APP%" OR 
-        SMS_R_System.NetbiosName LIKE "%APD%" OR 
-        SMS_R_System.NetbiosName LIKE "%SQP%" OR 
-        SMS_R_System.NetbiosName LIKE "%SQD%"
-    ) 
-    AND DateDiff(day, SMS_G_System_OPERATING_SYSTEM.InstallDate, GetDate()) <= 7
