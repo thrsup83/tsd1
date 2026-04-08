@@ -1,26 +1,18 @@
-javascript:(function(){
-    var seconds = prompt("Sconds", "150");
-    if(!seconds) return;
-
-    var old = document.getElementById('th-reloader-ui');
-    if(old) old.remove();
-
-    var ui = document.createElement('div');
-    ui.id = 'th-reloader-ui';
-    ui.style = 'position:fixed;top:10px;right:10px;z-index:99999;background:#222;color:#0f0;padding:10px;border:2px solid #0f0;font-family:monospace;font-size:12px;text-align:center;border-radius:5px;';
-    
-    ui.innerHTML = '<strong>Reloader Active</strong><br><span id="th-status">Aguardando...</span><br><button id="th-stop" style="margin-top:5px;cursor:pointer;background:#f00;color:#fff;border:none;padding:2px 5px;">PARAR</button>';
-    document.body.appendChild(ui);
-
-    var intervalMs = seconds * 1000;
-    
-    var timer = setInterval(function() {
-        location.reload();
-    }, intervalMs);
-
-    document.getElementById('th-stop').onclick = function() {
-        clearInterval(timer);
-        ui.remove();
-        alert('Reloader interrompido.');
-    };
-})();
+<Configuration>
+  <Add OfficeClientEdition="64" Channel="SemiAnnual">
+    <Product ID="O365ProPlusRetail">
+      <Language ID="en-us" />
+      <ExcludeApp ID="Access" />
+      <ExcludeApp ID="Groove" />
+      <ExcludeApp ID="Lync" />
+      <ExcludeApp ID="OneDrive" />
+      <ExcludeApp ID="OneNote" />
+      <ExcludeApp ID="Outlook" />
+      <ExcludeApp ID="PowerPoint" />
+      <ExcludeApp ID="Publisher" />
+      <ExcludeApp ID="Teams" />
+      <ExcludeApp ID="Word" />
+    </Product>
+  </Add>
+  <Display Level="Full" AcceptEULA="TRUE" />
+</Configuration>
