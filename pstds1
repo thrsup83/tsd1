@@ -1,5 +1,15 @@
-
-$Target = "{00000000-0000-0000-0000-000000000001}"
-Get-WmiObject -Namespace "root\ccm\invagents" -Class InventoryActionStatus | Where-Object { $_.InventoryActionID -eq $Target } | Remove-WmiObject
-
-Invoke-WMIMethod -Namespace "root\ccm" -Class "SMS_Client" -Name "TriggerSchedule" -ArgumentList "{00000000-0000-0000-0000-000000000001}"
+select SMS_R_System.ResourceId, SMS_R_System.ResourceType, SMS_R_System.Name, 
+SMS_R_System.SMSUniqueIdentifier, SMS_R_System.ResourceDomainORWorkgroup, 
+SMS_R_System.Client 
+from SMS_R_System 
+inner join SMS_G_System_WORKSTATION_STATUS on SMS_G_System_WORKSTATION_STATUS.ResourceId = SMS_R_System.ResourceId 
+where 
+SMS_R_System.ResourceId in (
+    select ResourceId from SMS_G_System_ADD_REMOVE_PROGRAMS 
+    where DisplayName like "Trellix%" or DisplayName like "FireEye%"
+) 
+OR 
+SMS_R_System.ResourceId in (
+    select ResourceId from SMS_G_System_ADD_REMOVE_PROGRAMS_64 
+    where DisplayName like "Trellix%" or DisplayName like "FireEye%"
+)
