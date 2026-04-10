@@ -1,1 +1,5 @@
 
+$Target = "{00000000-0000-0000-0000-000000000001}"
+Get-WmiObject -Namespace "root\ccm\invagents" -Class InventoryActionStatus | Where-Object { $_.InventoryActionID -eq $Target } | Remove-WmiObject
+
+Invoke-WMIMethod -Namespace "root\ccm" -Class "SMS_Client" -Name "TriggerSchedule" -ArgumentList "{00000000-0000-0000-0000-000000000001}"
