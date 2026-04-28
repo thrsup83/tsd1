@@ -1,15 +1,35 @@
-select SMS_R_System.ResourceId, SMS_R_System.ResourceType, SMS_R_System.Name, 
-SMS_R_System.SMSUniqueIdentifier, SMS_R_System.ResourceDomainORWorkgroup, 
-SMS_R_System.Client 
-from SMS_R_System 
-inner join SMS_G_System_WORKSTATION_STATUS on SMS_G_System_WORKSTATION_STATUS.ResourceId = SMS_R_System.ResourceId 
-where 
-SMS_R_System.ResourceId in (
-    select ResourceId from SMS_G_System_ADD_REMOVE_PROGRAMS 
-    where DisplayName like "Trellix%" or DisplayName like "FireEye%"
-) 
-OR 
-SMS_R_System.ResourceId in (
-    select ResourceId from SMS_G_System_ADD_REMOVE_PROGRAMS_64 
-    where DisplayName like "Trellix%" or DisplayName like "FireEye%"
+$ports = @(1433, 3389)
+$regBase = "HKLM:\SYSTEM\CurrentControlSet\Control\SecurityProviders\SCHANNEL"
+
+Write-Host "[ Port Status ]"
+foreach ($port in $ports) {
+    $check = New-Object System.Net.Sockets.TcpClient
+    $connect = $check.BeginConnect("127.0.0.1", $port, $null, $null)
+    $wait = $connect.AsyncWaitHandle.WaitOne(100, $false)
+    if($wait) { Write-Host "Port $port : OPEN" } else { Write-Host "Port $port : CLOSED" }
+    $check.Close()
+}
+
+Write-Host "`n[ Registry Status ]"
+$keys = @(
+    "Ciphers\RC4 40/128",
+    "Ciphers\RC4 56/128",
+    "Ciphers\RC4 64/128",
+    "Ciphers\RC4 128/128",
+    "Hashes\MD5"
 )
+
+foreach ($key in $keys) {
+    $fullPath = "$regBase\$key"
+    if (Test-Path $fullPath) {
+        $val = Get-ItemProperty -Path $fullPath -Name "Enabled" -ErrorAction SilentlyContinue
+        if ($null -eq $val) {
+            Write-Host "$key : VALUE NOT SET"
+        } else {
+            $status = if ($val.Enabled -eq 0) { "DISABLED (0)" } else { "ENABLED (1)" }
+            Write-Host "$key : $status"
+        }
+    } else {
+        Write-Host "$key : NOT FOUND (OS DEFAULT)"
+    }
+}
