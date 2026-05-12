@@ -20,3 +20,6 @@ if (exists key "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Session Mana
 
 
 exists key "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" of native registry AND (value "FeatureSettingsOverride" of key "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" of native registry as string = "8388680")
+
+
+(exists value "FeatureSettingsOverride" of key "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" of native registry) AND (value "FeatureSettingsOverride" of key "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" of native registry as integer as hex string = "0x00800048")
