@@ -1,1 +1,5 @@
-Get-WmiObject Win32_Product | Where-Object { $_.Name -like "*OrgPublisher*" } | Select-Object Name, InstallSource, LocalPackage | Format-List
+if (exists key "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" of native registry) then (value "FeatureSettingsOverride" of key "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" of native registry as string) else "N/A"
+
+
+
+if (exists key "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" of native registry) then (value "FeatureSettingsOverrideMask" of key "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" of native registry as string) else "N/A"
