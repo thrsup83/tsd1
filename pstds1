@@ -13,3 +13,6 @@ if (exists key "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Session Mana
 
 
 exists value "FeatureSettingsOverride" of key "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" of native registry
+
+
+if (exists key "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" of native registry) then (if (exists value "FeatureSettingsOverride" of key "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" of native registry) then (value "FeatureSettingsOverride" of key "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" of native registry as string) else "Value Missing") else "Key Missing"
