@@ -1,96 +1,53 @@
-if (exists key "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" of native registry) then (value "FeatureSettingsOverride" of key "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" of native registry as string) else "N/A"
-
-
-FeatureSettingsOverrideMask
-if (exists key "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" of native registry) then (value "FeatureSettingsOverrideMask" of key "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" of native registry as string) else "N/A"
-
-
-
-if (exists key "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" of native registry) then (if (exists value "FeatureSettingsOverride" of key "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" of native registry) then (value "FeatureSettingsOverride" of key "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" of native registry as integer as hex string) else "Value Missing") else "Key Missing"
-
-
-
-
-
-exists value "FeatureSettingsOverride" of key "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" of native registry
-
-
-if (exists key "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" of native registry) then (if (exists value "FeatureSettingsOverride" of key "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" of native registry) then (value "FeatureSettingsOverride" of key "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" of native registry as string) else "Value Missing") else "Key Missing"
-
-
-
-exists key "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" of native registry AND (value "FeatureSettingsOverride" of key "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" of native registry as string = "8388680")
-
-
-(exists value "FeatureSettingsOverride" of key "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" of native registry) AND (value "FeatureSettingsOverride" of key "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" of native registry as integer as hex string = "0x00800048")
-
-
-exists value "FeatureSettingsOverride"
-of key "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management"
-of native registry
-AND
-(
- value "FeatureSettingsOverride"
- of key "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management"
- of native registry as integer = 8388680
+Param(
+    [Parameter(Mandatory=$true)]
+    [string]$Term
 )
 
+$RootPath = "<<< INSERT ACTIVE FOLDER PATH HERE >>>"
 
+Write-Host "Searching for: '$Term'" -ForegroundColor Yellow
 
+$excel = New-Object -ComObject Excel.Application -ErrorAction SilentlyContinue
+if ($excel) {
+    $excel.Visible = $false; $excel.DisplayAlerts = $false
+    Get-ChildItem -Path $RootPath -Filter *.xlsx -Recurse | ForEach-Object {
+        try {
+            $workbook = $excel.Workbooks.Open($_.FullName, $false, $true)
+            foreach ($sheet in $workbook.Sheets) {
+                $found = $sheet.UsedRange.Find("*$Term*")
+                if ($found) {
+                    $Address = $found.Address($false, $false)
+                    $Value = $found.Text
+                    Write-Host "[EXCEL] File: $($_.Name) | Sheet: $($sheet.Name)" -ForegroundColor Green
+                    Write-Host "Match: '$Value' at Cell: $Address" -ForegroundColor Yellow
+                    Write-Host "Path: $($_.FullName)`n" -ForegroundColor Gray
+                    break
+                }
+            }
+            $workbook.Close($false)
+        } catch {}
+    }
+    $excel.Quit(); [System.Runtime.InteropServices.Marshal]::ReleaseComObject($excel) | Out-Null
+}
 
+$word = New-Object -ComObject Word.Application -ErrorAction SilentlyContinue
+if ($word) {
+    $word.Visible = $false
+    Get-ChildItem -Path $RootPath -Filter *.docx -Recurse | ForEach-Object {
+        try {
+            $doc = $word.Documents.Open($_.FullName, $false, $true)
+            $range = $doc.Content
+            if ($range.Find.Execute($Term)) {
+                $range.Expand(4) 
+                $LineText = $range.Text.Trim().Replace("`r", "").Replace("`n", " ")
+                Write-Host "[WORD] File: $($_.Name)" -ForegroundColor Cyan
+                Write-Host "Match: $LineText" -ForegroundColor Cyan
+                Write-Host "Path: $($_.FullName)`n" -ForegroundColor Gray
+            }
+            $doc.Close($false)
+        } catch {}
+    }
+    $word.Quit(); [System.Runtime.InteropServices.Marshal]::ReleaseComObject($word) | Out-Null
+}
 
-
-#
-
-
-if (exists value "FeatureSettingsOverride"
-of key "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management"
-of native registry)
-then
-(
- (
-  value "FeatureSettingsOverride"
-  of key "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management"
-  of native registry as string
- )
- & " | Hex: " &
- (
-  value "FeatureSettingsOverride"
-  of key "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management"
-  of native registry as integer as hex string
- )
-)
-else
-(
- "Missing"
-)
-
-#
-
-
-#
-
-if exists key "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management"
-of native registry
-then
-(
- if exists value "FeatureSettingsOverride"
- of key "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management"
- of native registry
- then
- (
-  value "FeatureSettingsOverride"
-  of key "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management"
-  of native registry as string
- )
- else
- (
-  "Value Missing"
- )
-)
-else
-(
- "Key Missing"
-)
-
-#
+Write-Host "Search completed." -ForegroundColor Yellow
