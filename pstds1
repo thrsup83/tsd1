@@ -51,3 +51,95 @@ if ($word) {
 }
 
 Write-Host "Search completed." -ForegroundColor Yellow
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Param(
+    [Parameter(Mandatory=$true)]
+    [string]$Term
+)
+
+$RootPath = "<<< INSERT ACTIVE FOLDER PATH HERE >>>"
+
+Write-Host "Searching for: '$Term'" -ForegroundColor Yellow
+Write-Host "--------------------------------------------------------"
+
+$excel = New-Object -ComObject Excel.Application -ErrorAction SilentlyContinue
+if ($excel) {
+    $excel.Visible = $false; $excel.DisplayAlerts = $false
+    Get-ChildItem -Path $RootPath -Filter *.xlsx -Recurse | Where-Object { $_.FullName -notmatch '\\Downloads\\' } | ForEach-Object {
+        try {
+            $workbook = $excel.Workbooks.Open($_.FullName, $false, $true)
+            foreach ($sheet in $workbook.Sheets) {
+                $found = $sheet.UsedRange.Find("*$Term*")
+                if ($found) {
+                    $firstAddress = $found.Address()
+                    while ($found) {
+                        $Value = $found.Text
+                        if ($Value -match "\b$Term") {
+                            $Address = $found.Address($false, $false)
+                            Write-Host "[EXCEL] File: $($_.Name) | Sheet: $($sheet.Name)" -ForegroundColor Green
+                            Write-Host "Match: '$Value' at Cell: $Address" -ForegroundColor Yellow
+                            Write-Host "Path: $($_.FullName)`n" -ForegroundColor Gray
+                        }
+                        $found = $sheet.UsedRange.FindNext($found)
+                        if ($found.Address() -eq $firstAddress) { break }
+                    }
+                }
+            }
+            $workbook.Close($false)
+        } catch {}
+    }
+    $excel.Quit(); [System.Runtime.InteropServices.Marshal]::ReleaseComObject($excel) | Out-Null
+}
+
+$word = New-Object -ComObject Word.Application -ErrorAction SilentlyContinue
+if ($word) {
+    $word.Visible = $false
+    Get-ChildItem -Path $RootPath -Filter *.docx -Recurse | Where-Object { $_.FullName -notmatch '\\Downloads\\' } | ForEach-Object {
+        try {
+            $doc = $word.Documents.Open($_.FullName, $false, $true)
+            $range = $doc.Content
+            while ($range.Find.Execute($Term)) {
+                $matchRange = $range.Duplicate
+                $null = $matchRange.Expand(4)
+                $LineText = $matchRange.Text.Trim().Replace("`r", "").Replace("`n", " ")
+                if ($LineText -match "\b$Term") {
+                    Write-Host "[WORD] File: $($_.Name)" -ForegroundColor Cyan
+                    Write-Host "Match: $LineText" -ForegroundColor Cyan
+                    Write-Host "Path: $($_.FullName)`n" -ForegroundColor Gray
+                }
+                $range.Collapse(0)
+            }
+            $doc.Close($false)
+        } catch {}
+    }
+    $word.Quit(); [System.Runtime.InteropServices.Marshal]::ReleaseComObject($word) | Out-Null
+}
+
+Get-ChildItem -Path $RootPath -Filter *.txt -Recurse | Where-Object { $_.FullName -notmatch '\\Downloads\\' } | ForEach-Object {
+    try {
+        $allMatches = Select-String -Path $_.FullName -Pattern "\b$Term"
+        foreach ($match in $allMatches) {
+            $LineText = $match.Line.Trim()
+            Write-Host "[TXT] File: $($_.Name)" -ForegroundColor Magenta
+            Write-Host "Match: $LineText" -ForegroundColor Magenta
+            Write-Host "Path: $($_.FullName)`n" -ForegroundColor Gray
+        }
+    } catch {}
+}
+
+Write-Host "Search completed." -ForegroundColor Yellow
