@@ -1,5 +1,25 @@
-# 2. Rebaixa os grupos da VIT para apenas Read & Execute (Impede Modify ou Superior)
-        icacls $file /grant:r "Authenticated Users":(RX)
-        icacls $file /grant:r "Users":(RX)
-        icacls $file /grant:r "Everyone":(RX)
-        icacls $file /grant:r "Domain Users":(RX)
+$need_fix = $false
+        $fix_commands = @()
+
+        if ($acl -like "*Authenticated Users*M*" -or $acl -like "*Authenticated Users*F*") {
+            $fix_commands += "Authenticated Users:(RX)"
+            $need_fix = $true
+        }
+        if ($acl -like "*Users*M*" -or $acl -like "*Users*F*") {
+            $fix_commands += "Users:(RX)"
+            $need_fix = $true
+        }
+        if ($acl -like "*Everyone*M*" -or $acl -like "*Everyone*F*") {
+            $fix_commands += "Everyone:(RX)"
+            $need_fix = $true
+        }
+        if ($acl -like "*Domain Users*M*" -or $acl -like "*Domain Users*F*") {
+            $fix_commands += "Domain Users:(RX)"
+            $need_fix = $true
+        }
+
+        if ($need_fix) {
+            icacls $file /inheritance:d
+            foreach ($cmd in $fix_commands) {
+                icacls $file /grant:r $cmd
+            }
