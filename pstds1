@@ -1,12 +1,5 @@
-
-        $linhas_com_erro = icacls $file | Where-Object {
-            ($_ -like "*Authenticated Users*M*" -or $_ -like "*Authenticated Users*F*") -or
-            ($_ -like "*Users*M*" -or $_ -like "*Users*F*") -or
-            ($_ -like "*Everyone*M*" -or $_ -like "*Everyone*F*")
-        }
-        
-
-        if ($linhas_com_erro) {
-            Add-Content .\PI-Permissions-Result.txt "Arquivo: $file"
-            Add-Content .\PI-Permissions-Result.txt $linhas_com_erro
-            Add-Content .\PI-Permissions-Result.txt ""
+# 2. Rebaixa os grupos da VIT para apenas Read & Execute (Impede Modify ou Superior)
+        icacls $file /grant:r "Authenticated Users":(RX)
+        icacls $file /grant:r "Users":(RX)
+        icacls $file /grant:r "Everyone":(RX)
+        icacls $file /grant:r "Domain Users":(RX)
