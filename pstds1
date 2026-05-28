@@ -1,2 +1,12 @@
-if ($acl -like "*Authenticated Users*M*" -or $acl -like "*Authenticated Users*F*" -or $acl -like "*Users*M*" -or $acl -like "*Users*F*" -or $acl -like "*Everyone*M*" -or $acl -like "*Everyone*F*") {
-            Add-Content .\PI-Permissions-Result.txt "Vul: $file"
+
+        $linhas_com_erro = icacls $file | Where-Object {
+            ($_ -like "*Authenticated Users*M*" -or $_ -like "*Authenticated Users*F*") -or
+            ($_ -like "*Users*M*" -or $_ -like "*Users*F*") -or
+            ($_ -like "*Everyone*M*" -or $_ -like "*Everyone*F*")
+        }
+        
+
+        if ($linhas_com_erro) {
+            Add-Content .\PI-Permissions-Result.txt "Arquivo: $file"
+            Add-Content .\PI-Permissions-Result.txt $linhas_com_erro
+            Add-Content .\PI-Permissions-Result.txt ""
