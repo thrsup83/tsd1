@@ -1,1 +1,2 @@
-$vuln = $acl | Select-String "Everyone:\(M","Everyone:\(F","Users:\(M","Users:\(F","Authenticated Users:\(M","Authenticated Users:\(F"
+if ($acl -like "*Authenticated Users*M*" -or $acl -like "*Authenticated Users*F*" -or $acl -like "*Users*M*" -or $acl -like "*Users*F*" -or $acl -like "*Everyone*M*" -or $acl -like "*Everyone*F*") {
+            Add-Content .\PI-Permissions-Result.txt "Vul: $file"
