@@ -1,25 +1,3 @@
-$need_fix = $false
-        $fix_commands = @()
+https://gov.teams.microsoft.us/meet/992518595970?p=1uEABLL0a1s0QJKPB0
 
-        if ($acl -like "*Authenticated Users*M*" -or $acl -like "*Authenticated Users*F*") {
-            $fix_commands += "Authenticated Users:(RX)"
-            $need_fix = $true
-        }
-        if ($acl -like "*Users*M*" -or $acl -like "*Users*F*") {
-            $fix_commands += "Users:(RX)"
-            $need_fix = $true
-        }
-        if ($acl -like "*Everyone*M*" -or $acl -like "*Everyone*F*") {
-            $fix_commands += "Everyone:(RX)"
-            $need_fix = $true
-        }
-        if ($acl -like "*Domain Users*M*" -or $acl -like "*Domain Users*F*") {
-            $fix_commands += "Domain Users:(RX)"
-            $need_fix = $true
-        }
-
-        if ($need_fix) {
-            icacls $file /inheritance:d
-            foreach ($cmd in $fix_commands) {
-                icacls $file /grant:r $cmd
-            }
+https://gov.teams.microsoft.us/meet/992518595970?p=1uEABLL0a1s0QJKPB0
