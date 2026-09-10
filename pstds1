@@ -1,1 +1,57 @@
 
+Plaintext
+Implemented by ZZZZZZZ
+ETA: 30 minutes
+
+TTT Snapshot:
+- Access TTT Console and navigate to Server
+- Locate server "XXXXXX"
+- Create a pre-change snapshot of the root volume
+
+YYYYYY Access:
+- Log into YYYYYY
+- Select an account with administrator privileges
+- Initiate RDP connection to server "XXXXXX"
+
+Remove Unsupported SQL Server 2016 LocalDB:
+- Open Control Panel > Programs and Features
+- Locate "Microsoft SQL Server 2016 LocalDB" in the installed programs list
+- Right-click and select Uninstall
+- Follow the uninstallation wizard to complete the removal
+- Restart the server if required to complete file cleanup
+- Confirm the server is back online and accessible
+02
+
+Plaintext
+Test by ZZZZZZZ
+ETA: 10 minutes
+
+YYYYYY Access:
+- Log into YYYYYY
+- Reconnect to server "XXXXXX" via RDP
+
+Validation:
+- Open Control Panel > Programs and Features and confirm Microsoft SQL Server 2016 LocalDB is no longer listed
+- Verify that the path "C:\Program Files\Microsoft SQL Server\130\LocalDB\Binn" has been removed
+- Open Services (services.msc) and ensure no SQL Server 2016 services are present
+- Verify that core server services and dependent applications are operating normally
+- Take a screenshot as proof of completion
+03
+
+Plaintext
+Backout by ZZZZZZZ
+ETA: 20 minutes
+
+Reinstall SQL Server 2016 LocalDB:
+- Log into YYYYYY and access server "XXXXXX" via RDP
+- Run the Microsoft SQL Server 2016 LocalDB installer package (SqlLocalDB.msi) from the staging folder
+- Complete setup to restore the instance binaries
+- Restart the server if required
+
+TTT Snapshot Rollback (If server is unstable or encounters critical issues):
+- Access TTT Console and locate Server "XXXXXX"
+- Stop the server
+- Restore the root volume using the pre-change snapshot
+- Start the server
+- Access the server via YYYYYY and verify system stability
+- Take a screenshot as proof of rollback
