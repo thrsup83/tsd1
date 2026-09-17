@@ -1,15 +1,1 @@
 
-Markdown
-# Office C2R Quick Update
-
-## 1. Check Running Apps
-```powershell
-Get-Process -Name WINWORD, EXCEL, POWERPNT, OUTLOOK, MSACCESS -EA SilentlyContinue
-2. Trigger Update
-PowerShell
-& "$env:ProgramFiles\Common Files\microsoft shared\ClickToRun\OfficeC2RClient.exe" /update user displaylevel=false forceappshutdown=false
-(If no apps are open, the update downloads and applies immediately).
-
-3. Check Version
-PowerShell
-(Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\Office\ClickToRun\Configuration").VersionToReport
